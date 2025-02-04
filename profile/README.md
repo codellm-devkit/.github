@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <a href="https://codellm-devkit.info">Documentation</a> |
+  <a href="https://codellm-devkit.github.io/docs">Documentation</a> |
   <a href="https://github.com/orgs/codellm-devkit/discussions">Discussions</a>
 </p>
 
@@ -40,7 +40,7 @@ Codellm-Devkit (CLDK) is a multilingual program analysis framework that bridges 
 
 ## Getting Started
 
-- 📚 Read the [Documentation](https://codellm-devkit.info) for guides and tutorials
+- 📚 Read the [Documentation](https://codellm-devkit.github.io/docs) for guides and tutorials
 - 💻 Use our SDKs to start building:
   - [Python SDK](https://github.com/codellm-devkit/cldk-python-sdk)
   - [TypeScript SDK](https://github.com/codellm-devkit/cldk-typescript-sdk)
