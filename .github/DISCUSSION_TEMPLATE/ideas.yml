@@ -1,0 +1,36 @@
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting your idea
+      options:
+        - label: I have verified this would not be more appropriate as a feature request in a specific repository
+          required: true
+        - label: I have searched existing discussions to avoid duplicates
+          required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your Idea
+      description: Share your idea for improving CLDK
+      placeholder: |
+        Please describe your idea in detail:
+        - What problem does it solve?
+        - Who would benefit from this?
+        - How might it be implemented?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: What aspect of CLDK does this idea relate to? (Select all that apply)
+      options:
+        - label: Protocol Specification
+        - label: SDK Features
+        - label: Documentation
+        - label: Developer Experience
+        - label: Other

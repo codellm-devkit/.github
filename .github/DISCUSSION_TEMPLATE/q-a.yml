@@ -1,0 +1,31 @@
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before asking your question
+      options:
+        - label: I have checked that this question would not be more appropriate as an issue in a specific repository
+          required: true
+        - label: I have searched existing discussions and documentation for answers
+          required: true
+
+  - type: checkboxes
+    id: category
+    attributes:
+      label: Question Category
+      description: What area is your question about? Select all that apply.
+      options:
+        - label: Python SDK Usage
+        - label: Typescript SDK Usage
+        - label: Documentation
+        - label: Other
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Be specific and include any relevant context or code examples
+    validations:
+      required: true

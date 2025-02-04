@@ -1,0 +1,35 @@
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before sharing your work
+      options:
+        - label: This post follows the CLDK community guidelines
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like to share?
+      description: Tell us about what you've built or learned with CLDK
+      placeholder: |
+        Share details about:
+        - What you built
+        - How you built it
+        - What challenges you faced
+        - What you learned
+        - Any tips for others
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Relevant Links
+      description: Share any relevant links to your project
+      placeholder: |
+        - GitHub repository
+        - Blog post
+        - Demo
+        - Documentation

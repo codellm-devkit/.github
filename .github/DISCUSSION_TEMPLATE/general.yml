@@ -1,0 +1,22 @@
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting your discussion
+      options:
+        - label: I have verified that this discussion would not be more appropriate as an issue in a specific repository
+          required: true
+        - label: I have searched existing discussions to avoid duplicates
+          required: true
+
+  - type: textarea
+    id: topic
+    attributes:
+      label: Discussion Topic
+      description: What would you like to discuss with the CLDK community?
+      placeholder: |
+        Please provide a clear description of what you'd like to discuss.
+        Include relevant context and background information.
+    validations:
+      required: true
