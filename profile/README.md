@@ -48,8 +48,9 @@ Codellm-Devkit (CLDK) is a multilingual program analysis framework that bridges 
 
 ## Project Structure
 
-- [cldk-python-sdk](https://github.com/codellm-devkit/python-sdk) - Python implementation
-- [cldk-typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - TypeScript implementation
+- [python-sdk](https://github.com/codellm-devkit/python-sdk) - Python implementation
+- [typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - TypeScript implementation
+- [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) - Uses WALA and Java Parser to provide static analysis artifacts for Java and JavaEE projects.
 - [cldk-tool-calling](https://github.com/codellm-devkit/cldk-tool-calling) - Wrappers for various tool calling with LLMs
 - [docs](https://github.com/codellm-devkit/docs) - User documentation and guides
 
