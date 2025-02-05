@@ -62,4 +62,4 @@ Have questions? Join the discussion in our [community forum](https://github.com/
 
 ## About
 
-Codellm-devkit is an open source project run by [IBM](https://ibm.com) and open to contributions from the entire community.
+Codellm-devkit is an open source project run by [IBM Research](https://github.com/IBM) and open to contributions from the entire community.
