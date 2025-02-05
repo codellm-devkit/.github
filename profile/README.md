@@ -63,3 +63,16 @@ Have questions? Join the discussion in our [community forum](https://github.com/
 ## About
 
 Codellm-devkit is an open source project run by [IBM Research](https://github.com/IBM) and open to contributions from the entire community.
+
+## Reference
+
+If you used Codellm-Devkit, please use the following reference
+
+```bibtex
+@article{krishna2024codellm,
+  title={Codellm-Devkit: A Framework for Contextualizing Code LLMs with Program Analysis Insights},
+  author={Krishna, Rahul and Pan, Rangeet and Pavuluri, Raju and Tamilselvam, Srikanth and Vukovic, Maja and Sinha, Saurabh},
+  journal={arXiv preprint arXiv:2410.13007},
+  year={2024}
+}
+```
