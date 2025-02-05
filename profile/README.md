@@ -42,14 +42,14 @@ Codellm-Devkit (CLDK) is a multilingual program analysis framework that bridges 
 
 - 📚 Read the [Documentation](https://codellm-devkit.github.io/docs) for guides and tutorials
 - 💻 Use our SDKs to start building:
-  - [Python SDK](https://github.com/codellm-devkit/cldk-python-sdk)
-  - [TypeScript SDK](https://github.com/codellm-devkit/cldk-typescript-sdk)
+  - [Python SDK](https://github.com/codellm-devkit/python-sdk)
+  - [TypeScript SDK](https://github.com/codellm-devkit/typescript-sdk)
 - 🤖 CLDK wrappers for [Tool Calling](https://github.com/codellm-devkit/cldk-tool-calling) with various LLMs.
 
 ## Project Structure
 
-- [cldk-python-sdk](https://github.com/codellm-devkit/cldk-python-sdk) - Python implementation
-- [cldk-typescript-sdk](https://github.com/codellm-devkit/cldk-typescript-sdk) - TypeScript implementation
+- [cldk-python-sdk](https://github.com/codellm-devkit/python-sdk) - Python implementation
+- [cldk-typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - TypeScript implementation
 - [cldk-tool-calling](https://github.com/codellm-devkit/cldk-tool-calling) - Wrappers for various tool calling with LLMs
 - [docs](https://github.com/codellm-devkit/docs) - User documentation and guides
 
