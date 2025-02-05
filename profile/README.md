@@ -14,7 +14,7 @@
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge" />
   </a>
-  <a href="https://codellm-devkit.github.io/docs/">
+  <a href="https://codellm-devkit.info">
     <img src="https://img.shields.io/badge/GitHub%20Pages-Docs-blue?style=for-the-badge" />
   </a>
   <a href="https://badge.fury.io/py/cldk">
