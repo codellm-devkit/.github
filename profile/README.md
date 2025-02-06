@@ -62,10 +62,6 @@ We welcome contributions of all kinds! Whether you want to fix bugs, improve doc
 
 Have questions? Join the discussion in our [community forum](https://github.com/orgs/codellm-devkit/discussions) or [Discord server](https://discord.gg/zEjz9YrmqN).
 
-## About
-
-Codellm-devkit is an open source project run by [IBM Research](https://github.com/IBM) and open to contributions from the entire community.
-
 ## Reference
 
 To cite Codellm-Devkit, please use the following reference:
@@ -78,3 +74,6 @@ To cite Codellm-Devkit, please use the following reference:
   year={2024}
 }
 ```
+## IBM Public Repository Disclosure
+
+Codellm-devkit is an open source project from [IBM Research](https://github.com/IBM) and open to contributions from the entire community. All content in these repositories including code has been provided by IBM under the associated open source software license and IBM is under no obligation to provide enhancements, updates, or support. IBM developers produced this code as an open source project (not as an IBM product), and IBM makes no assertions as to the level of quality nor security.
