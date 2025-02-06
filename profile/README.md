@@ -68,7 +68,7 @@ Codellm-devkit is an open source project run by [IBM Research](https://github.co
 
 ## Reference
 
-If you used Codellm-Devkit, please use the following reference
+To cite Codellm-Devkit, please use the following reference:
 
 ```bibtex
 @article{krishna2024codellm,
