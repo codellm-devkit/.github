@@ -1,3 +1,10 @@
+---
+name: Pull Request
+about: Submit a pull request to improve the project
+title: ''
+labels: ""  # or "bug", depending on the PR
+assignees: ''
+---
 <!-- Provide a brief summary of your changes -->
 ## Motivation and Context
 <!-- Why is this change needed? What problem does it solve? -->
