@@ -1,0 +1,13 @@
+{
+    "name": "Java Release Workflow",
+    "description": "Creates releases for Java projects (Maven or Gradle) when a version tag is pushed",
+    "iconName": "package",
+    "categories": ["Java", "CD"],
+    "filePatterns": [
+        "gradlew$",
+        "build.gradle$",
+        "build.gradle.kts$",
+        "pom.xml$",
+        "mvnw$"
+    ]
+}
