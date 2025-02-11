@@ -46,6 +46,5 @@ jobs:
         with:
           files: build/libs/*.jar
           body: ${{ steps.gen_changelog.outputs.changelog }}
-          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
