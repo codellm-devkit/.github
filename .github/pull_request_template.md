@@ -4,7 +4,6 @@ about: Submit a pull request to improve the project
 title: ''
 labels: ""  # or "bug", depending on the PR
 assignees: ''
-projects_v2: codellm-devkit/1  # Replace with your org/user and project number
 ---
 <!-- Provide a brief summary of your changes -->
 
