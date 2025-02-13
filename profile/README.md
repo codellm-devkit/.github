@@ -20,7 +20,7 @@
   <a href="https://badge.fury.io/py/cldk">
     <img src="https://img.shields.io/pypi/v/cldk?style=for-the-badge&label=codellm-devkit&color=blue" />
   </a>
-  <a href="https://discord.gg/zEjz9YrmqN">
+  <a href="https://discord.com/channels/1333486179667935403/1334150434348208208">
     <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/zEjz9YrmqN?style=for-the-badge"/>
   </a>
 </p>
@@ -67,7 +67,7 @@ Codellm-Devkit (CLDK) is a multilingual program analysis framework that bridges 
 
 We welcome contributions of all kinds! Whether you want to fix bugs, improve documentation, or propose new features, please see our [contributing guide](CONTRIBUTING.md) to get started.
 
-Have questions? Join the discussion in our [community forum](https://github.com/orgs/codellm-devkit/discussions) or [Discord server](https://discord.gg/zEjz9YrmqN).
+Have questions? Join the discussion in our [community forum](https://github.com/orgs/codellm-devkit/discussions) or [Discord server](https://discord.com/channels/1333486179667935403/1334150434348208208).
 
 ## Reference
 
