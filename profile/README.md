@@ -20,8 +20,8 @@
   <a href="https://badge.fury.io/py/cldk">
     <img src="https://img.shields.io/pypi/v/cldk?style=for-the-badge&label=codellm-devkit&color=blue&logo=python" />
   </a>
-  <a href="https://www.npmjs.com/package/@cldk/cldk">
-    <img src="https://img.shields.io/npm/v/@cldk/cldk?color=crimson&logo=npm&style=for-the-badge" />
+<a href="https://www.npmjs.com/package/@codellm-devkit/cldk">
+    <img src="https://img.shields.io/npm/v/@codellm-devkit/cldk?color=crimson&logo=npm&style=for-the-badge" />
   </a>
   <a href="https://discord.com/channels/1333486179667935403/1334150434348208208">
     <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/zEjz9YrmqN?style=for-the-badge"/>
