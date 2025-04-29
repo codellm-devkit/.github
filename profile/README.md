@@ -1,11 +1,8 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/codellm-devkit/.github/blob/main/profile/assets/cldk-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/codellm-devkit/.github/blob/main/profile/assets/cldk-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/cldk-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/cldk-light.png">
   <img alt="Logo">
 </picture>
-
-<p></p>
-<p></p>
 
 <p align='center'>
   <a href="https://arxiv.org/abs/2410.13007">
@@ -60,15 +57,15 @@ Codellm-Devkit (CLDK) is a multilingual program analysis framework that bridges 
 
 ## Language Specific Analysis Backends
 - [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) - Uses WALA and Java Parser to provide static analysis artifacts for Java and JavaEE projects.
-- [codeanalyzer-rust](https://github.com/codellm-devkit/codeanalyzer-rust) - Provides static analysis artifacts for Rust projects.
 - [codeanalyzer-go](https://github.com/codellm-devkit/codeanalyzer-rust) - Provides static analysis artifacts for Go projects.
+- [codeanalyzer-rust](https://github.com/codellm-devkit/codeanalyzer-rust) - Provides static analysis artifacts for Rust projects.
 
 ## CodeLLM usage plugins  
 - [cldk-tool-calling](https://github.com/codellm-devkit/cldk-tool-calling) - Wrappers for various tool calling with LLMs
 
 ## Documentation and Examples
 - [docs](https://github.com/codellm-devkit/docs) - User documentation and guides
-- [cldk-examples](https://github.com/codellm-devkit/cldk-examples) - several usage examples with CLDK
+- [cldk-examples](https://github.com/codellm-devkit/cldk-tutorial) - Start building with CLDK
 
 ## Contributing
 
