@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/cldk-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/cldk-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/codellm-devkit/.github/blob/main/profile/assets/cldk-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/codellm-devkit/.github/blob/main/profile/assets/cldk-light.png">
   <img alt="Logo">
 </picture>
 
