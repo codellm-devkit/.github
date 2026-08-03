@@ -27,7 +27,7 @@ body:
     attributes:
       label: Spec
       description: Path to the committed spec this epic comes from. Link it, don't paste it.
-      placeholder: docs/superpowers/specs/YYYY-MM-DD-<name>-design.md
+      placeholder: docs/design/specs/YYYY-MM-DD-<name>-design.md
     validations:
       required: true
 

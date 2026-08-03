@@ -21,7 +21,7 @@ body:
     attributes:
       label: Plan (optional)
       description: Path to the committed plan this came from, if there is one. Link it, don't paste it.
-      placeholder: docs/superpowers/plans/YYYY-MM-DD-<name>.md
+      placeholder: docs/design/plans/YYYY-MM-DD-<name>.md
     validations:
       required: false
 

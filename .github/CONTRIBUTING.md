@@ -56,14 +56,14 @@ can read does not preserve a design record; it hides one.
 
 ### Specs and plans are committed
 
-Design docs live in `docs/superpowers/specs/` and `docs/superpowers/plans/` and are committed as
+Design docs live in `docs/design/specs/` and `docs/design/plans/` and are committed as
 **provenance**. An issue *links* the spec it came from; it does not paste the design into the body.
 The doc is reviewable in a PR and diffable over time — an issue body is neither.
 
 | Spec scope | Committed to |
 | --- | --- |
-| Touches **one** repo | that repo's `docs/superpowers/specs/` |
-| Touches **several** repos | `codellm-devkit/codellm-devkit` → `docs/superpowers/specs/` |
+| Touches **one** repo | that repo's `docs/design/specs/` |
+| Touches **several** repos | `codellm-devkit/codellm-devkit` → `docs/design/specs/` |
 
 A cross-repo design has no natural home in any one of the repos it changes — committing it to
 whichever one happened to go first is arbitrary, and every other repo then links sideways into it.
