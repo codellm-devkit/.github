@@ -7,9 +7,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        > ### ⚠️ Epics belong in `codellm-devkit/codellm-devkit`
+        > ### ⚠️ Epics belong in `codellm-devkit/.github`
         > If you are filing this anywhere else, stop and
-        > [open it in the umbrella repo](https://github.com/codellm-devkit/codellm-devkit/issues/new?template=epic.yml)
+        > [open it in the .github repo](https://github.com/codellm-devkit/.github/issues/new?template=epic.yml)
         > instead. Working repos' trackers hold only work items — one per PR — so they stay readable.
         > Children get filed on the repo they change and attached here as cross-repo sub-issues.
 

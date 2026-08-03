@@ -18,15 +18,20 @@ with three sub-issues — because there are three PRs, not because there are thr
 | Template | Use when | Where it goes |
 | --- | --- | --- |
 | **Work item** | One unit of work, closed by one PR. The default. | the repo it changes |
-| **Epic** | Work spanning repos or several PRs. | **`codellm-devkit/codellm-devkit`** (the umbrella repo), always |
+| **Epic** | Work spanning repos or several PRs. | **`codellm-devkit/.github`** (this repo), always |
 
 If in doubt, open a Work item. Promoting one to an epic later is cheap; splitting a premature
 epic back into nothing is not.
 
-**Epics never live on the repo doing the work.** They go in the umbrella repo, next to
-`ROADMAP.md`, so a working repo's issue tracker contains only work items — one per PR — and stays
-readable. Children are filed on the repo they change and attached across repos as sub-issues;
-GitHub supports a parent and child in different repositories within an org.
+**Epics never live on the repo doing the work.** They go in `codellm-devkit/.github` — the repo that
+already defines how this org works — so a working repo's issue tracker contains only work items, one
+per PR, and stays readable. Children are filed on the repo they change and attached across repos as
+sub-issues; GitHub supports a parent and child in different repositories within an org (up to 100
+sub-issues per parent, 8 levels of nesting).
+
+This repo is **public** on purpose. An outside contributor who picks up a work item can open the
+epic that explains it and read the spec it links to. A private planning repo would leave public
+issues pointing at things their reader cannot see.
 
 Both land on **Project 1 — "Codellm-Devkit: Project Planning Board"** automatically, because the
 issue forms declare it. The board is the cross-repo *view*; the epic is the cross-repo *record*.
@@ -63,7 +68,7 @@ The doc is reviewable in a PR and diffable over time — an issue body is neithe
 | Spec scope | Committed to |
 | --- | --- |
 | Touches **one** repo | that repo's `docs/design/specs/` |
-| Touches **several** repos | `codellm-devkit/codellm-devkit` → `docs/design/specs/` |
+| Touches **several** repos | `codellm-devkit/.github` → `docs/design/specs/` |
 
 A cross-repo design has no natural home in any one of the repos it changes — committing it to
 whichever one happened to go first is arbitrary, and every other repo then links sideways into it.
