@@ -43,15 +43,12 @@ Java, Python, and TypeScript are supported today, with Go, Rust, and C in develo
 pip install cldk
 ```
 
-The Java backend is bundled — you only need a JDK on your `PATH` to analyze Java projects.
-
 ```python
-import os
 from cldk import CLDK
 from cldk.analysis import AnalysisLevel
 
-analysis = CLDK(language="java").analysis(
-    project_path=os.environ["JAVA_APP_PATH"],
+analysis = CLDK.python(
+    project_path="/path/to/python/project",
     analysis_level=AnalysisLevel.call_graph,
 )
 
@@ -59,7 +56,7 @@ print(len(analysis.get_classes()), "classes")
 print(analysis.get_call_graph())
 ```
 
-Construct a `CLDK` object, build an `analysis` facade pointing at a project, then query it. Only the `language` argument changes across languages.
+Swap `CLDK.python(...)` for `CLDK.java(...)` or `CLDK.typescript(...)` — the query API is the same across languages. The Java backend is bundled, so analyzing Java projects needs only a JDK on your `PATH`.
 
 ## Project Structure
 
