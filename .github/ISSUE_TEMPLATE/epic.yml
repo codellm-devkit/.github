@@ -7,6 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
+        > ### ⚠️ Epics belong in `codellm-devkit/codellm-devkit`
+        > If you are filing this anywhere else, stop and
+        > [open it in the umbrella repo](https://github.com/codellm-devkit/codellm-devkit/issues/new?template=epic.yml)
+        > instead. Working repos' trackers hold only work items — one per PR — so they stay readable.
+        > Children get filed on the repo they change and attached here as cross-repo sub-issues.
+
         **Only open an epic when the work spans repos or several pull requests.**
         Tracking granularity follows PR granularity — never step count, never repo count.
         A change that lands in one PR needs one Work item, not an epic.

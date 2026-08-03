@@ -15,13 +15,22 @@ with three sub-issues — because there are three PRs, not because there are thr
 
 ### The two templates
 
-| Template | Use when |
-| --- | --- |
-| **Work item** | One unit of work, closed by one PR. The default. |
-| **Epic** | Work spanning repos or several PRs. Holds the design summary and a link to the spec. |
+| Template | Use when | Where it goes |
+| --- | --- | --- |
+| **Work item** | One unit of work, closed by one PR. The default. | the repo it changes |
+| **Epic** | Work spanning repos or several PRs. | **`codellm-devkit/codellm-devkit`** (the umbrella repo), always |
 
 If in doubt, open a Work item. Promoting one to an epic later is cheap; splitting a premature
 epic back into nothing is not.
+
+**Epics never live on the repo doing the work.** They go in the umbrella repo, next to
+`ROADMAP.md`, so a working repo's issue tracker contains only work items — one per PR — and stays
+readable. Children are filed on the repo they change and attached across repos as sub-issues;
+GitHub supports a parent and child in different repositories within an org.
+
+Both land on **Project 1 — "Codellm-Devkit: Project Planning Board"** automatically, because the
+issue forms declare it. The board is the cross-repo *view*; the epic is the cross-repo *record*.
+Don't hand-curate the board.
 
 ### Sub-issues, not checklists
 
@@ -47,9 +56,18 @@ can read does not preserve a design record; it hides one.
 
 ### Specs and plans are committed
 
-Design docs live in the repo (`docs/superpowers/specs/`, `docs/superpowers/plans/`) and are
-committed as **provenance**. An issue *links* the spec it came from; it does not paste the design
-into the body. The doc is reviewable in a PR and diffable over time — an issue body is neither.
+Design docs live in `docs/superpowers/specs/` and `docs/superpowers/plans/` and are committed as
+**provenance**. An issue *links* the spec it came from; it does not paste the design into the body.
+The doc is reviewable in a PR and diffable over time — an issue body is neither.
+
+| Spec scope | Committed to |
+| --- | --- |
+| Touches **one** repo | that repo's `docs/superpowers/specs/` |
+| Touches **several** repos | `codellm-devkit/codellm-devkit` → `docs/superpowers/specs/` |
+
+A cross-repo design has no natural home in any one of the repos it changes — committing it to
+whichever one happened to go first is arbitrary, and every other repo then links sideways into it.
+It belongs with the epic that coordinates it.
 
 ### Branches and PRs
 
