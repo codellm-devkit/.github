@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How we track work (issue conventions)
+    url: https://github.com/codellm-devkit/.github/blob/main/.github/CONTRIBUTING.md
+    about: One issue = one pull request. Epics use sub-issues. File issues just-in-time. Read this before opening an epic.
