@@ -1,0 +1,84 @@
+name: Epic
+description: Cross-repo or multi-PR work, tracked from a committed spec. Skip this if the change lands in one PR — file a Work item instead.
+title: "Epic: "
+labels: ["Epic"]
+projects: ["codellm-devkit/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Only open an epic when the work spans repos or several pull requests.**
+        Tracking granularity follows PR granularity — never step count, never repo count.
+        A change that lands in one PR needs one Work item, not an epic.
+
+        Children are tracked as **native sub-issues** (the "Create sub-issue" control below the
+        body once this is filed), not as a hand-maintained checklist and not with `Part of #N`
+        trailers. File each child **when you pick up that unit**, not all at once up front —
+        un-started issues are inventory.
+
+  - type: input
+    id: spec
+    attributes:
+      label: Spec
+      description: Path to the committed spec this epic comes from. Link it, don't paste it.
+      placeholder: docs/superpowers/specs/YYYY-MM-DD-<name>-design.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 2-4 sentences. What changes and why. Name the contract impact explicitly.
+      placeholder: |
+        Adds a `comment` body-node kind to the canonical schema, so callable-adjacent
+        comments survive into the CPG. Schema impact: one new node kind, additive.
+        (Or: "No schema change — SDK surface only.")
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected repos
+      description: One line each, with the role. This list drives the decomposition — it is not itself a list of issues to file.
+      placeholder: |
+        - codeanalyzer-python — emits the new node kind
+        - python-sdk — model + accessor uptake
+    validations:
+      required: true
+
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Design decisions
+      description: What was locked, and what is explicitly out of scope. Record the reasoning, so it isn't re-litigated in six months.
+      placeholder: |
+        - <decision, and why this option over the alternative>
+        - Scope guard: <what is explicitly OUT>
+    validations:
+      required: true
+
+  - type: textarea
+    id: release
+    attributes:
+      label: Release plan
+      description: What ships when, what gates what, and where two repos need version lockstep. A decomposition without a release plan is a pile of issues in no order.
+      placeholder: |
+        - <which release/train carries each piece>
+        - <what gates what>
+        - <version lockstep, and which side moves first>
+    validations:
+      required: true
+
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done (epic-level)
+      description: Exact conditions, not "works correctly". Prefer exact expected sets over "non-empty".
+      placeholder: |
+        - Every sub-issue closed and its gate green.
+        - <contract/parity gate that must hold>
+        - Docs and CHANGELOG updated; versions pinned in lockstep.
+    validations:
+      required: true

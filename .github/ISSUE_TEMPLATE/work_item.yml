@@ -1,0 +1,78 @@
+name: Work item
+description: One unit of work closed by one pull request. Use this for a standalone change, or as a sub-issue of an epic.
+title: ""
+labels: []
+projects: ["codellm-devkit/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **One issue = one pull request.** If this would take several PRs, it is an Epic with
+        sub-issues. If it is a step inside one PR, it is a checkbox in Goals below — not its
+        own issue.
+
+        File this **when you pick up the work**, not when you finish planning.
+
+        Keep Caveats and Definition of done filled in. They are the parts that make an issue
+        honest: a definition of done that says "works correctly" is not one.
+
+  - type: input
+    id: plan
+    attributes:
+      label: Plan (optional)
+      description: Path to the committed plan this came from, if there is one. Link it, don't paste it.
+      placeholder: docs/superpowers/plans/YYYY-MM-DD-<name>.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What this repo lacks today and what this issue adds. One paragraph. Cite file:line where you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope boundary
+      description: What this issue does NOT do. The most useful sentence in the issue — it is what stops the PR sprawling.
+      placeholder: |
+        Fixes the freshness predicate only. Not the analyzer's internal caching,
+        and not the Python backend (which already behaves correctly).
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals
+      description: The contract, as a task list. Steps within this one PR go here as checkboxes — they do not become separate issues.
+      placeholder: |
+        - [ ] <goal>
+        - [ ] <goal>
+    validations:
+      required: true
+
+  - type: textarea
+    id: caveats
+    attributes:
+      label: Caveats and known risks
+      description: Substrate/tooling risks, inherited unsoundness, known gaps. Be concrete and name the workaround. If there genuinely are none, say so explicitly.
+      placeholder: |
+        - <risk — and the mitigation, not just the worry>
+        - <known gap, documented rather than silently absorbed>
+    validations:
+      required: true
+
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+      description: Exact conditions. Prefer an exact expected set over "non-empty", and a demonstrated behaviour over an asserted one.
+      placeholder: |
+        - <exact-set gate — e.g. the returned set equals the hand-computed one>
+        - <test that fails before and passes after>
+    validations:
+      required: true
