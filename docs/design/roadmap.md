@@ -1,185 +1,173 @@
 # CLDK roadmap
 
-**Pass:** 2026-08-05  ·  **Planned with:** Rahul Krishna
+**Pass:** 2026-08-05, amended 2026-08-05 after implementation evidence
+**Planned with:** Rahul Krishna
 **Status:** current  (supersede by editing, not by adding a second roadmap)
 
-Theme of this pass: **full JavaScript and HTML support**, triggered by the finding
-that `codeanalyzer-typescript` analyzes *no* JavaScript at all today —
-`src/syntactic_analysis/discovery.ts:5` restricts discovery to
-`.ts/.tsx/.mts/.cts`, so a pure-JS project emits an empty symbol table and exits 0.
-Measured on OWASP NodeGoat (50 `.js`, 24 `.html`): 0 modules, 0 edges, 84-byte
-`analysis.json`, no warning at default verbosity. The same gate is present verbatim
-at tag `v0.5.0`, one line different from `main`.
+Theme: **full JavaScript and HTML support**, triggered by the finding that
+`codeanalyzer-typescript` analyzed *no* JavaScript at all —
+`src/syntactic_analysis/discovery.ts:5` restricted discovery to `.ts/.tsx/.mts/.cts`,
+so a pure-JS project emitted an empty symbol table and exited 0. Measured on OWASP
+NodeGoat (50 `.js`, 24 `.html`): 0 modules, 0 edges, an 84-byte `analysis.json`.
 
-## The two decisions this pass made
+## What this amendment changes, and why
 
-### 1. `<lang>` denotes the artifact's source language
+The first pass built its expensive half on a premise that implementing the cheap half
+falsified. Recording that plainly, because the reasoning matters more than the outcome.
 
-`<lang>` in `can://<lang>/<app>/…` is the **artifact's source language**, not the
-analyzer that produced it. A pure-JS application is `can://javascript/…` and its
-manifest says `"language": "javascript"`.
+**The falsified premise.** `<lang>` was defined as the artifact's source language on the
+grounds that the manifest language is load-bearing: a consumer must be able to tell
+TypeScript-quality edges from JavaScript-quality ones. Direct measurement, same
+analyzer, same application, only the file extension differing:
 
-The rejected alternative was a family-scoped literal (`can://typescript/` covering
-both, with a per-module `language` attribute). It was rejected because the manifest
-language is load-bearing, not cosmetic: on untyped JS the tsc resolver leg collapses
-(NodeGoat, `.js` renamed to `.ts`: 20 resolved vs 174 unresolved call sites; Jelly
-supplied 131 of the 170 union edges). A consumer that cannot tell TS-quality edges
-from JS-quality edges cannot calibrate anything built on them.
+| | NodeGoat as `.js` | renamed `.ts` |
+| --- | --- | --- |
+| resolved call sites (tsc) | **28** | 20 |
+| callables in symbol table | **24** | **24** |
+| ES6 classes captured | yes | yes |
+| `this.x = fn` captured | no | **no** |
 
-The accepted cost: a **mixed** `.ts` + `.js` application — the common case in any
-migration, or any TS project with JS tooling — spans two `can://` roots, and schema
-v2 has no vocabulary for an edge crossing applications. That forces a schema major.
+Identical with and without `node_modules` materialized. The TypeScript compiler resolves
+JavaScript *better* than the same code renamed `.ts`, because it models `module.exports`
+and `require()` as module syntax in `.js` files and not in `.ts` files. Every gap found
+is an **idiom** gap — `this.x = fn` inside a constructor function, object-literal methods
+— missing in **both** languages. There is no JS-vs-TS quality axis to encode.
 
-**Scope: web only, explicitly.** `codeanalyzer-clang` (C and C++ in one repo) and the
-`codeanalyzer-java` / `codeanalyzer-kotlin` pair are **not** bound by it. See Risks.
+**The second correction.** The 0.x line, which is where every consumer actually sits,
+emits schema v1: top-level keys `symbol_table`, `call_graph`, `external_symbols`,
+`synthesized_callables`, with path-based signatures (`src/index.makeHandle`). There is
+no `can://` id, no application root, and no manifest `language`. The entire identity
+question is therefore a **v2 concern**, and v2 reaches no consumer until candidate 9.
 
-### 2. JavaScript ships on the 0.x line, not on 1.x
+**Net effect.** The schema v3 major, the cross-root edge vocabulary, and the second
+analyzer repo all leave the near-term plan. What remains is a v1 delivery track with no
+contract decisions in it.
 
-Because that is where every consumer actually is:
+## Decisions
 
-```
-python-sdk/pyproject.toml:43        codeanalyzer-typescript==0.4.3   ← exact pin
-cldk/models/typescript/models.py:24 TSApplication{symbol_table, call_graph}  ← v1 flat shape
-```
-
-`cants` 1.0.0's schema-v2 output is consumed by **nothing** today. Shipping JS on 1.1.0
-would have parked it behind an SDK migration with no owner (candidate 9).
-
-This has a load-bearing side effect: **the 0.x line emits v1, which has no `can://`
-ids and no manifest `language`, so there is no literal to coin.** Candidate 1 is
-therefore blocked by nothing and needs no design session — it is `maintaining-cldk`
-work, not a contract change.
-
-**0.x is the supported line until v3 lands**, carrying candidate 4 as well as
-candidate 1. That re-opens collision group B on the v1 schema; see Risks.
+1. **One analyzer for the JS/TS/HTML ecosystem.** `codeanalyzer-typescript` keeps its
+   name and grows extractors for JavaScript and HTML. No `codeanalyzer-javascript`, no
+   `codeanalyzer-html`, no `codeanalyzer-web`. A pure-TypeScript project is one where a
+   single extractor fires — a configuration, not a separate product. Two backends over
+   the same file types would fork ~4,200 LOC of language-neutral engine (dataflow 2,521,
+   schema 784, providers 950), duplicate every idiom fix forever, and churn every id the
+   day a TypeScript repo gains one `eslint.config.js`.
+   *Renaming is a separate, deferrable decision from remit, and is not being taken.*
+2. **Ship on 0.x.** `python-sdk` pins `codeanalyzer-typescript==0.4.3` and its model layer
+   is the v1 flat `TSApplication`, so nothing released on the v2 line reaches a consumer.
+   0.x is the supported line until candidate 9 concludes.
+3. **HTML lands in the v1 shape.** An `.html` file is a `symbol_table` entry; its inline
+   `<script>` callables are that module's `functions`; `<script src>` and handler-attribute
+   edges are ordinary `call_graph` entries; library calls from inline script are
+   `external_symbols`. No new node kinds and no envelope work are required on 0.x.
+   `stripTsExtension` (`src/schema/schema.ts:433-435`) does not strip `.html`, so
+   signatures read `views/login.html.handleSubmit` — kept deliberately, since it
+   disambiguates `login.html` from `login.js` and needs no code change.
 
 ## Candidates
 
-| # | Feature | Moves schema v2? | Collision group | Blocked by |
-| - | ------- | ---------------- | --------------- | ---------- |
-| 1 | JS file discovery in `cants` (`.js/.jsx/.mjs/.cjs`) | no — 0.x emits v1, which has no `can://` ids or manifest `language` | — | — |
-| 2 | Artifact-language rule: `<lang>` = source language; literals coined | yes — id shape + manifest | A | — |
-| 3 | Cross-root edge vocabulary (js↔ts, `<script src>`→module, handler-attr→callable) | yes — new edge kinds + cross-application endpoints | A, B | 2 |
-| 4 | CommonJS module vocabulary (`require`, `module.exports`, `exports.x`) | coined on v1 first; v3 adopts verbatim | B | — |
-| 5 | SDK facade + pins (`CLDK.javascript()`, html backend) | yes — public API | A | 2, 3, 9 |
-| 6 | HTML artifact node kinds (document, element, inline-script, handler-attr) | yes — new node kinds | C | 3 |
-| 7 | Template engines (Handlebars, EJS, Pug) | yes — reuses group C kinds | C | 6 |
-| 8 | Repo topology: `codeanalyzer-html` as its own repo | no — packaging only | — | 6 |
-| 9 | `python-sdk` model migration (pin `0.4.3` → v3; `TSApplication` → v3 envelope) | yes — public API | — | own planning pass |
+| # | Feature | Line | Moves schema? | Blocked by |
+| - | ------- | ---- | ------------- | ---------- |
+| 1 | JS file discovery (`.js/.jsx/.mjs/.cjs`) — **done**, issue #84 | 0.x | no | — |
+| 4 | CommonJS module vocabulary (`require`, `module.exports`, `exports.x`) | 0.x | v1 only | — |
+| 6 | HTML: inline `<script>`, `<script src>`, handler-attribute edges | 0.x | v1 only | — |
+| 10 | Idiom gap: `this.x = fn` and object-literal methods not materialized as callables | 0.x | v1 only | — |
+| 9 | `python-sdk` model migration (pin `0.4.3` → v2/v3; `TSApplication` → envelope) | v2 | yes — public API | own planning pass |
+| 2 | Artifact-language vs family `<lang>`, per-node `language` | v2 | yes — id shape | 9 |
+| 3 | Cross-artifact edge vocabulary as first-class schema | v2 | yes | 9, 2 |
+| 7 | Template engines (Handlebars, EJS, Pug) | v2 | yes | 6, 9 |
+
+Candidates 5 and 8 from the first pass are closed: there is no separate SDK facade to
+design (candidate 5 folds into 9) and no second repo to create (candidate 8).
+
+**Candidate 10 is language-neutral and does not belong to this theme.** It is listed
+because it was discovered here and it dominates real-world JS recall, not because it is
+a JavaScript problem — NodeGoat yields the same 24 callables whether its files are `.js`
+or `.ts`, and idiomatic TypeScript (`sample-app`) resolves 81% of call sites against
+NodeGoat's 11%. It should be fixed once, for both languages.
 
 ## Collision groups
 
-- **Group A — id and manifest vocabulary**: candidates 2, 3, 5.
-  Decided once: the exact literal strings (`javascript` vs `js` vs `ecmascript`;
-  `html`), whether the manifest `language` stays scalar, and what an edge endpoint
-  looks like when it names a node in another application.
-  Design session: **candidate 2**, carrying candidate 3.
-  Candidate 1 left this group when JS moved to the 0.x line — v1 has no literal.
-
-- **Group B — module-edge vocabulary**: candidates 3, 4.
-  `require("./util")`, `import x from "./util"` and `<script src="util.js">` are the
-  same relation seen three ways. **Candidate 4 now coins this vocabulary first, on
-  the v1 schema**, ahead of candidate 3's design session. Decision: ship it and
-  correct by yank-and-reship if v3 wants different names — see Risks for why that is
-  affordable on v1 and not after.
-
-- **Group C — artifact node kinds**: candidates 6, 7.
-  Engine-agnostic at birth — Handlebars is the second consumer, and NodeGoat's actual
-  XSS surface lives in its 24 `.html` views, not in its routes.
-  Design session: **candidate 6**.
-
-Candidate 3 spans groups A and B. It is the keystone of the pass.
+- **0.x track: none.** v1 is not governed by the parity clause, has exactly one consumer
+  (`python-sdk`, at a pin this org controls), and the agreed remedy for a wrong name is
+  to yank and reship. Candidates 1, 4, 6 and 10 can proceed without a design session.
+- **v2 track — identity and artifact vocabulary**: candidates 2, 3, 7, 9.
+  One decision, taken inside candidate 9's pass, since v2 has no consumer until then.
+  What it must settle: whether `<lang>` is family or artifact, where per-node `language`
+  lives, and what an HTML document is as a first-class node kind.
 
 ## Dependency order
 
-    1 (JS discovery, 0.x) ──▶ 4 (CommonJS module vocabulary, 0.x)
-     └─ unblocks #52, cocoa#1                    [v1 schema — no design gate on either]
+    0.x (v1, no contract gate)
+      1 (discovery — done) ──▶ 4 (CommonJS)
+                           └──▶ 6 (HTML inline script)
+      10 (idiom gap) — independent, language-neutral, highest recall impact
 
-    2 (artifact-language rule + literals)
-     └──▶ 3 (cross-root edge vocabulary)   ◀── keystone, spans A + B
-           ├──▶ 6 (HTML node kinds) ──▶ 7 (template engines)
-           │                         └──▶ 8 (codeanalyzer-html repo)
-           └──▶ 5 (SDK facade) ◀── also blocked by 9
-
-    9 (python-sdk model migration) ── deferred to its own pass; blocks 5
-
-Candidate 4 is drawn unblocked but is **not** unconstrained: candidate 3 must adopt
-its field names rather than coin its own.
-
-**Repo topology is not a contract question.** Because `<lang>` is per-artifact, one
-binary can emit several roots, so repo count and literal count are independent. What
-remains is a toolchain argument: JavaScript shares essentially all of `cants`'
-machinery (ts-morph already parses `.js`; `allowJs: true` is already the default at
-`symbolTable.ts:115-126`), whereas HTML shares none of it. Hence JS stays in
-`codeanalyzer-typescript` and HTML becomes its own repo — candidate 8. The repo name
-no longer implies the emitted literal, which is the point of decoupling them.
+    v2 (parked)
+      9 (SDK model migration) ──▶ 2 (identity) ──▶ 3 (artifact edges) ──▶ 7 (templates)
 
 ## Release trains
 
 | Train | Carries | Notes |
 | ----- | ------- | ----- |
-| `codeanalyzer-typescript` **0.6.0** (maintenance branch off `v0.5.0`) | 1 | v1 schema. `python-sdk` pin `0.4.3` → `0.6.0`, one line. Unblocks issue #52 and `cocoa#1`. |
-| `codeanalyzer-typescript` **0.7.0** | 4 | v1 schema. Field names here are binding on v3. |
-| `main` / 1.x | forward-ports of 1 and 4 | Keeps the v2 line current. No consumer until candidate 9. |
-| **schema v3** — all analyzers + both SDKs, lockstep | 2, 3 | One migration. `codeanalyzer-java`, `-python`, `-typescript` re-cut together. |
-| SDK minor | 5 | After candidate 9's pass concludes. |
-| `codeanalyzer-html` 0.1.0 | 6, 8 | Additive on v3. |
-| `codeanalyzer-html` 0.2.0 | 7 | Additive. |
+| `codeanalyzer-typescript` 0.6.0 | 1 | v1 schema. `python-sdk` pin `0.4.3` → `0.6.0`, one line. Unblocks #52 and `cocoa#1`. |
+| `codeanalyzer-typescript` 0.7.0 | 4, 10 | v1 schema. |
+| `codeanalyzer-typescript` 0.8.0 | 6 | v1 schema. HTML as `symbol_table` entries. |
+| `main` / 1.x | forward-ports | Keeps the v2 line current. No consumer until candidate 9. |
+| — parked — | 9, then 2, 3, 7 | Sequenced by candidate 9's own planning pass. |
+
+The v3 major from the first pass is **withdrawn**. Nothing on the 0.x track needs it, and
+the v2 track's shape is candidate 9's to decide.
 
 ## Not now
 
-- **Candidate 9 — `python-sdk` model migration.** A discovered blocker with no owner:
-  the SDK is pinned to `0.4.3` and its model layer is v1-shaped, so nothing `cants`
-  has released since schema v2 reaches any consumer. Deferred to **its own planning
-  pass** because it touches the java and python analyzers too, not just typescript.
-  The open question it must answer: migrate v1→v2 now and v2→v3 later, or skip v2
-  entirely and migrate once.
-- **CSS** — no consumer has asked for selector or style reachability.
-- **Sourcemaps and minified `dist/` bundles** — analyzing generated output rather than
-  sources inverts the model. Excluded on principle, not on cost.
-- **Browser DOM sink taxonomy** (`innerHTML`, `document.write`, …) — belongs to a
-  security-rules layer above the schema, not to the analyzer's vocabulary.
-- **JSX-as-HTML unification** — decide after group C exists and has one real consumer.
-- **The `<lang>` rule for `codeanalyzer-clang` and `codeanalyzer-java` /
-  `codeanalyzer-kotlin`** — explicitly out of scope, by decision. See Risks.
+- **Candidate 9 — `python-sdk` model migration.** The real blocker: nothing `cants` has
+  released since schema v2 reaches any consumer. Deferred to **its own planning pass**;
+  it touches the java and python analyzers too. Open question it must answer: migrate
+  v1→v2 now and v2→v3 later, or skip v2 and migrate once.
+- **The `<lang>` identity decision (candidate 2).** Parked with 9 — v2 has no consumer,
+  so deciding now buys nothing and risks coining permanent vocabulary from a position we
+  have twice had to revise.
+- **First-class HTML node kinds and cross-artifact edge kinds (candidates 3, 7).** The v1
+  shape carries HTML adequately for the 0.x track; promote to real vocabulary only when
+  v2 is consumable.
+- **Renaming the repo/package.** Remit is broadening; the name is not moving. Revisit only
+  if it demonstrably confuses users.
+- **CSS**, **sourcemaps and minified `dist/` bundles**, **browser DOM sink taxonomy**,
+  **JSX-as-HTML unification** — unchanged from the first pass.
+- **The `<lang>` rule for `codeanalyzer-clang` and `codeanalyzer-java`/`-kotlin`** — still
+  out of scope, and now less urgent since no `<lang>` rule is being coined this pass.
 
 ## Risks
 
-**Three conventions.** Artifact-language literals are an ecosystem-wide convention,
-but this pass binds only the web analyzers. `codeanalyzer-clang` already covers two
-distinct languages in one repo; java/kotlin are one runtime family in two repos with
-two literals. The ecosystem has no settled convention today in either direction, and
-this pass deliberately does not create one. Exposure: three incompatible conventions
-across web, clang and jvm — the outcome the parity clause exists to prevent. Accepted
-knowingly. *Mitigation, free:* write candidate 2's rule in family-neutral terms even
-though it binds only web, so later clang/jvm adoption is ratification, not
-re-litigation.
+**Span units become intra-file with HTML.** `cants` emits UTF-16 char offsets
+(`src/schema/graphs.ts:37`); `codeanalyzer-python` emits utf-8 byte offsets
+(`py_schema.py:198`) — both under `span.bytes`. Today that is a cross-analyzer
+inconsistency. Inline `<script>` puts HTML offsets and JavaScript offsets in **one file
+and one span space**, so a unit mismatch silently points every inline-script span at the
+wrong text, with no error. *Mitigation, gating:* candidate 6 must fix the unit convention
+for both offsets before emitting a single inline-script span, and the fixture must include
+non-ASCII content so the gate can fail.
 
-**Group B coined twice — accepted, with a stated remedy.** Making 0.x the supported
-line means candidate 4 coins the module-edge vocabulary on the v1 schema, months
-before candidate 3 governs the same relation on v3. No up-front design session is
-being spent on it: if v3 wants different names, 0.x is **yanked and reshipped**.
+**Two live lines.** 0.x and `main` both receive work, forward-ported in one direction.
+`discovery.ts` differed between `v0.5.0` and `main` by one line when this began; the cost
+grows with every 1.x commit.
 
-That remedy is affordable *here specifically*, and the reason is worth stating so it
-is not generalized by mistake. The v1 line has exactly one consumer — `python-sdk`,
-at an exact pin this org controls — and v1 is not governed by the parity clause. So a
-bad name reaches one repo and is retracted by bumping one line.
+**v1 vocabulary coined ahead of v2.** Candidates 4, 6 and 10 name fields on the v1 schema
+before candidate 2 governs the same concepts on v2. Accepted: v1 has one pinned consumer
+and is not parity-clause governed, and the remedy is to yank and reship. This is
+affordable *here specifically* and does not generalize — once the canonical schema carries
+a name it lives in consumers' Neo4j projections and cached `analysis.json`, and yanking a
+package version does not un-coin it.
 
-It stops being affordable at v3. Once the canonical schema carries a name, it lives
-in consumers' Neo4j projections and cached `analysis.json` files; yanking a package
-version does not un-coin it. The parity clause exists for exactly that asymmetry.
-
-**Two live lines.** 0.x and `main` both receive JS work, with forward-porting in one
-direction. `discovery.ts` currently differs between `v0.5.0` and `main` by one line,
-so the cost is low today and grows with every 1.x commit.
+**This roadmap has been revised once by implementation evidence.** Both revisions came
+from measuring rather than reasoning. Treat the v2 track's shape as provisional until
+something on it is actually built.
 
 ## Starting now
 
-Candidate **1** — JS file discovery on a 0.6.0 maintenance branch off `v0.5.0`. No
-design session required: the 0.x line emits v1, so no schema vocabulary is at stake.
-Enters via `maintaining-cldk`, closes issue #52, unblocks `cocoa#1`.
+Candidate **1** shipped — `codeanalyzer-typescript` issue #84, branch `feat/issue-84` off
+`v0.5.0`, targeting 0.6.0.
 
-Candidate **2** (carrying **3**) is the next design session, and the largest rock on
-this roadmap. It is not started in this pass.
-
-Everything else here has no issue yet, by design.
+Candidate **10** (the idiom gap) is the highest-recall next step and needs no design
+session. Everything else here has no issue yet, by design.
