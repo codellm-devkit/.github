@@ -25,7 +25,17 @@ test checks it against its own declared schema rather than against the canonical
 That is exactly how `codeanalyzer-python` and `codeanalyzer-typescript` both read
 `SCHEMA_VERSION = "2.0.0"` while emitting materially different graphs.
 
-Measured against the emitters, not the docs:
+**No consumer sees v2 yet, and that is the opportunity.** The v2 work is unreleased on
+both analyzers. `python-sdk/pyproject.toml` pins `codeanalyzer-python==0.3.1` and
+`codeanalyzer-typescript==0.4.3`, which emit `SCHEMA_VERSION` **1.2.0** and **1.0.0**
+respectively — the v1 vocabulary (`PyApplication` / `PY_HAS_MODULE`; bare `Application` /
+`Module` / `Symbol` / `HAS_MODULE`). Both SDK Neo4j backends match their pins exactly.
+`codeanalyzer-typescript`'s tags stop at `v1.0.0`; the `2.0.0` schema is a development
+tip. So the divergence below is between two **unreleased** lines, and fixing it before
+either ships is enormously cheaper than reconciling shipped contracts afterwards.
+
+Measured against the emitters at their development tips, not the docs and not the
+released lines:
 
 | | `codeanalyzer-python` 2.0.0 | `codeanalyzer-typescript` 2.0.0 | `codeanalyzer-java` 1.1.0 |
 | --- | --- | --- | --- |
@@ -82,7 +92,8 @@ term coined twice is coined wrong permanently — this one is at three and risin
 | 11 | Greenfield analyzers born conformant — go, dotnet (epic #34), kotlin, rust, swift, abap | yes — never migrate | — | A |
 | 12 | **`python-sdk` v2 model layer** — one `Node` / `Edge` / `Application` mirroring canonical v2, replacing the four per-language model packages | no — SDK model layer | C | 7, 8, or 9 (any one conformant analyzer) |
 | 13 | **Backwards-compatibility policy for the SDK** — what of the existing surface is preserved, how deprecation is signalled, how long the old models keep parsing | no — SDK contract | C | — |
-| 14 | SDK TypeScript Neo4j backend queries `(:Application)-[:HAS_MODULE]->(:Module)` while the analyzer emits `TSApplication` / `TS_HAS_MODULE` / `TSModule` | no — reconciliation | — | — |
+| 14 | ~~SDK TypeScript Neo4j backend vocabulary drift~~ — **withdrawn, not a defect.** See Not now | — | — | — |
+| 15 | **Move the SDK's analyzer pins from the 0.x line to the v2 line** — `codeanalyzer-python==0.3.1` and `codeanalyzer-typescript==0.4.3` in `pyproject.toml`, both schema v1 | no — dependency pins, but it is what makes v2 reach a consumer | C | 7, 8 |
 
 ## Collision groups
 
@@ -127,11 +138,11 @@ contract.
      ├─▶ 10 codeanalyzer-clang     (assess first — may be larger than a migration)
      └─▶ 11 greenfield: go, dotnet (#34), kotlin, rust, swift, abap
 
-    C  (12 SDK v2 model + 13 backcompat policy)   ◀── after any one conformant analyzer
+    C  (12 SDK v2 model + 13 backcompat policy + 15 pin move)  ◀── after any one conformant analyzer
      └─▶ (microservice initiative resumes here)
 
-    14 SDK TypeScript backend drift — independent; fix early, it is cheap and it makes
-       candidate 8's result observable from the SDK
+Candidate 15 is the step that makes any of this visible to a user: until the SDK's pins
+move off the 0.x line, a conformant analyzer changes nothing a consumer can observe.
 
 Candidate 13 has no blocker and could be settled first: deciding the backwards-compat
 policy *before* the model layer is designed is what stops the policy becoming whatever
@@ -147,7 +158,7 @@ the implementation happened to make easy.
 | `codeanalyzer-typescript` 2.1.0 | 8 | additive MINOR — it is closest to canonical; the work is projecting to Neo4j what it already computes |
 | `codeanalyzer-clang` TBD | 10 | scope unknown until assessed |
 | greenfield initial releases | 11 | born conformant, never migrate |
-| `python-sdk` | 12, 13, 14 | version depends on candidate 13's policy — see below |
+| `python-sdk` | 12, 13, 15 | version depends on candidate 13's policy — see below. Candidate 15 moves the pins, so this train is what actually delivers v2 to consumers |
 
 **Python and Java ride one migration, together with the SDK.** Two analyzer majors
 landing separately would force the SDK through two compatibility windows.
@@ -172,6 +183,16 @@ but the cost is carrying two model layers until the deprecation window closes.
   initiative.
 - **`codeanalyzer-go` analysis levels L2 to L4** — Go's entry to this roadmap is
   candidate 11, being born conformant. Depth for Go is a separate initiative.
+- **Candidate 14, withdrawn — it was not a defect.** The first pass recorded the SDK's
+  TypeScript Neo4j backend as drifting from its analyzer, because it queries bare
+  `Application` / `Module` / `HAS_MODULE` while `codeanalyzer-typescript`'s schema at the
+  development tip emits `TSApplication` / `TSModule` / `TS_HAS_MODULE`. That compared a
+  released consumer against an unreleased producer. `pyproject.toml` pins
+  `codeanalyzer-typescript==0.4.3`, whose `SCHEMA_VERSION` is `1.0.0` and whose labels are
+  exactly the bare ones the SDK queries; the same holds for `codeanalyzer-python==0.3.1`
+  at `1.2.0`. Both backends are correctly matched to their pins. Recorded rather than
+  deleted, because the mistake is instructive: **compare a consumer against the version it
+  pins, not against the working tree.** The real work it pointed at is candidate 15.
 - **Unified canonical SDK model classes replacing per-language facades** — candidate 12
   builds the shared model layer; whether `PythonAnalysis` / `JavaAnalysis` /
   `TypeScriptAnalysis` eventually collapse into one facade is a later question, and
@@ -184,7 +205,6 @@ but the cost is carrying two model layers until the deprecation window closes.
 
 No epic is filed. Epics are filed just-in-time when implementation starts, and a
 spec-only pass has no pull request to close. The first epic under this roadmap will be
-whichever of candidates 7 through 11 is picked up once Group A's spec exists to point
-at — with candidate 14 available as a cheap independent starter at any time.
+whichever of candidates 7 through 11 is picked up once Group A's spec exists to point at.
 
 Everything else on this roadmap has no issue yet, by design.
