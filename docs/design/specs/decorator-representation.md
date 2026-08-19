@@ -24,8 +24,12 @@ field tables) specifies the opposite, at L1, and says so explicitly:
 divergent analyzer, not the pioneer.
 
 This spec makes Python conform: `decorators` becomes a list of structured `PyDecorator` objects
-carrying a resolved `qualified_name`, on four node kinds instead of one. It ships as
-`schema_version` `2.0.0` → **`2.1.0`**, amending v2 in place.
+carrying a resolved `qualified_name`, on four node kinds instead of one.
+
+**No `schema_version` bump is claimed.** Schema v2 is a moving target until Java, Python, and
+TypeScript settle on a stable shape; it is not a released, versioned contract that individual
+changes amend. This change *is* part of that convergence — Python adopting the decorator shape
+TypeScript already emits — not a release against a frozen contract.
 
 ### Why now
 
@@ -109,7 +113,8 @@ must not be gated behind a level.
 | D3 | Four carriers: callable, class, class attribute, callable parameter. | Matches TypeScript. The keystone names type/callable/field; parameter is TS's addition and is cheap to match. |
 | D4 | `span` rather than TS `schema.ts`'s flat line/col quadruple. | Python v2 and the canonical TS v2 model both use `Span`; the flat form is legacy. |
 | D5 | **No decoration edge family.** #129 closes as answered by D2. | `qualified_name` makes decoration joinable in both projections without coining a cross-language edge type no other analyzer has. Revisit only if real queries fall short. |
-| D6 | Ships as `schema_version` **2.1.0**, amending v2 in place. | Follows the precedent set by `can-uri-service-segment.md` (D3 there): v2 has not reached a released SDK, so a v3 is a major nobody migrates across. See the caveat in § 6. |
+| D6 | **No `schema_version` bump.** Schema v2 is a moving target until Java/Python/TS converge, so there is no stable contract number for this change to amend. | The version field is not a release marker while v2 is still settling. Convergence between the three analyzers is the milestone, not a number. |
+| D6a | The **cache-invalidation guard** must still reject caches built with the old shape. `core.py:728` hard-codes `!= "2.0.0"`; it needs a cache epoch that moves when the emitted shape moves. | This is a correctness requirement, not a versioning one: without it a stale cache round-trips old-shape decorators through a new analyzer. Deliberately decoupled from any contract-version claim. |
 | D7 | Neo4j `SCHEMA_VERSION` → 2.1.0; `:PyDecorator` keeps merging on `name`, gains `qualified_name` as a property. | Re-keying the shared `:PyDecorator` node on `qualified_name` would change merge behaviour for existing graphs and is not required by any decided use case. |
 | D8 | Release order: **analyzer first, `python-sdk` follows.** | Chosen deliberately over an SDK-tolerant-first sequence. See the caveat in § 6. |
 
@@ -133,21 +138,17 @@ must not be gated behind a level.
 
 ## 6. Caveats and accepted risks
 
-- **A breaking field change shipping as a MINOR bump.** `codeanalyzer-python`'s own rule
-  (`neo4j/schema.py:27`) says bump MAJOR on a breaking change, and `decorators` is a field that
-  currently ships in a released 2.0.0. This is a deliberate exception on the precedent of
-  `can-uri-service-segment.md`, and it is genuinely riskier here than there: that spec could
-  argue no consumer holds a `can://` id, whereas `python-sdk` **does** ship
-  `decorators: List[str]` today (`cldk/models/python/projections.py:58`). A consumer reading
-  `decorators[0]` as a string breaks with no major-version signal. Mitigation is the release
-  note and the SDK update, not the version number.
+- **`python-sdk` breaks with no version signal.** It ships `decorators: List[str]` today
+  (`cldk/models/python/projections.py:58`), and there is no contract-version bump to warn a
+  consumer that the field changed shape — because v2 carries no such guarantee yet. The
+  mitigation is the SDK update and the release note, and the honest statement that schema v2 is
+  not stable enough to pin against.
 - **The release order leaves a broken window.** Analyzer-first means a `python-sdk` release
   exists that will mis-parse the new analyzer's output until the SDK catches up. The window is
   the accepted cost of not writing tolerant dual-shape parsing.
-- **Version collision with `can-uri-service-segment.md`.** That spec is also draft, also
-  targets `schema_version` 2.1.0, and also touches `codeanalyzer-python`. If both land, the
-  second must not silently reuse the number. Whichever ships first takes 2.1.0; the other takes
-  2.2.0. This needs a decision at merge time, not at design time.
+- **Stale caches are the sharp edge, not the version number.** `core.py:728` accepts any cache
+  whose `schema_version` equals the current literal. Change the shape without moving that guard
+  and a cached analysis silently feeds old-shape decorators to a new analyzer. D6a covers it.
 - **`qualified_name` resolution is best-effort.** Jedi will not resolve every decorator —
   dynamic attribute access, conditional imports, decorators built at runtime. `None` is the
   normal case for those, not an error, and resolution must never raise.
@@ -169,5 +170,7 @@ must not be gated behind a level.
 - `analysis.json(-a 1) ⊆ ... ⊆ analysis.json(-a 4)` still holds
 - Neo4j exposes `qualified_name` on `:PyDecorator` and `PY_DECORATED_BY` traverses from
   `:PyClass`
+- A cache written before this change is **rejected and rebuilt**, not round-tripped — the
+  regression test writes an old-shape cache and asserts the rebuild
 - `python-sdk` parses the new shape
 - `.claude/SCHEMA_DECISIONS.md` carries a one-line entry per decision D1–D8, linking here
