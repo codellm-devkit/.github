@@ -33,12 +33,20 @@ Measured against the emitters, not the docs:
 | Neo4j merge labels | **9** — `PyApplication`, `PyModule`, `PySymbol`, `PyPackage`, `PyDecorator`, `PyCallSite`, `PyAttribute`, `PyVariable`, `PyCFGNode` | **2** — `Application`, `CanNode` | `JApplication`, `JSymbol`, + per-kind |
 | Statement/body model | split — `PyCallSite` + `PyCFGNode` | unified — `TSBodyNode` with a `kind` discriminant | **absent from Neo4j** — deferred, `SCHEMA_DECISIONS.md` #9 |
 | `cfg` / `cdg` / `ddg` / `summary` / `param_in` / `param_out` | yes, all six | yes, all six | callable→callable only (`J_CONTROL_DEP` / `J_DATA_DEP` / `J_HEAP_DATA_DEP`) |
-| Decorators in `analysis.json` | structured `PyDecorator` | structured `TSDecorator` (`SCHEMA_DECISIONS.md` #4) | flat `annotations: string[]` |
-| Decorators in **Neo4j** | yes — `PyDecorator` + `PY_DECORATED_BY` | **no** | no |
+| Decorators in `analysis.json` | **flat `decorators: List[str]`** — `ast.unparse` output; there is no `PyDecorator` model (`schema/py_schema.py:274`) | structured `TSDecorator` (`SCHEMA_DECISIONS.md` #4) | flat `annotations: string[]` |
+| Decorators in **Neo4j** | yes — `:PyDecorator` + `PY_DECORATED_BY`, but the node carries only the raw string (`neo4j/project.py:443`) | **no** | no |
 | Entrypoints | none | `TSApplication.entrypoints` — `analysis.json` only | `JEntrypoint` marker + `is_entrypoint` — Neo4j only |
 | `MARKER_LABELS` | `[]` | `[]` | `["JEntrypoint"]` |
 
 Three structural problems fall out.
+
+**0. Python and TypeScript have mirror-image decorator gaps.** Python has the graph
+projection and flat data; TypeScript has the structured data and no graph projection.
+Neither is closer to canonical here — they fail the same contract from opposite sides, and
+closing one gap does not inform the other. (Corrected 2026-08-19: this table previously
+credited Python with a structured `PyDecorator`. No such model exists — the name is a Neo4j
+label whose only property is the unparsed source string. Tracked as
+codellm-devkit/codeanalyzer-python#128.)
 
 **1. The two projections disagree inside a single analyzer.** Canonical v2 states plainly
 that `analysis.json` and the Neo4j graph are two projections of one structure and *they
