@@ -1,8 +1,14 @@
 # Spec: structured decorator representation in canonical schema v2
 
-Status: draft for review
+Status: **input to codellm-devkit/.github#36** (the canonical projection contract), not a peer spec
 Date: 2026-08-19
 Scope: canonical schema v2 node fields, `codeanalyzer-python` + `python-sdk`
+
+> **Read this as evidence, not as a settled contract.** The decorator shape is a
+> projection-contract decision and #36 owns it. This document is the Python-side
+> investigation feeding that decision: what the emitter actually does today, what
+> TypeScript already does, and a recommended shape. Where it disagrees with #36's
+> outcome, #36 wins.
 
 ---
 
@@ -57,9 +63,15 @@ new node kinds.
 | `python-sdk` | `cldk/models/python/projections.py:58` mirrors `decorators: List[str]` | the consumer of the field |
 | docs | README schema section, `schema.neo4j.json` | regenerated from source at release |
 
-`codeanalyzer-typescript-v2` is **not** in scope — it already conforms. `codeanalyzer-java` is
-**not** in scope: it uses `annotations: List[str]`, a different field name on a v1 analyzer, and
-aligning it is its own decision.
+`codeanalyzer-typescript` **is** affected, contrary to an earlier draft of this spec. It conforms
+on the `analysis.json` side but drops decorators entirely on the Neo4j side (`roadmap.md`, and
+codellm-devkit/.github#35's affected-repo list). Python and TypeScript therefore have
+**mirror-image gaps**: Python has the graph projection carrying flat data, TypeScript has the
+structured data with no graph projection. Closing one does not close the other, and the
+projection-parity gate (#37) is what would have caught both.
+
+`codeanalyzer-java` is **not** in scope: it uses `annotations: List[str]`, a different field name
+on a v1 analyzer, and aligning it is part of its own v2 migration (`codeanalyzer-java#179`).
 
 ---
 
