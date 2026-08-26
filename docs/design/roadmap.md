@@ -1,8 +1,21 @@
 # CLDK roadmap
 
-**Pass:** 2026-08-07
+**Pass:** 2026-08-07  ·  **Amended:** 2026-08-26
 **Planned with:** Rahul Krishna
 **Status:** current  (supersede by editing, not by adding a second roadmap)
+
+> **2026-08-26 amendment.** The microservice initiative — parked in "Not now" below —
+> now has a concrete first slice: a **repository-artifact layer** on each analyzer, the
+> producer-side evidence a cross-service analysis needs but no analyzer emits today (a
+> non-source file inventory with raw text, normalized dependency declarations, and
+> configuration key definitions/uses). It adds candidates 15–18 and collision group D.
+> The four models land into the v2 catalog that Group A stands up, so Group A blocks
+> them. Candidate 18 (config uses) is **scoped in with a per-projection split** rather
+> than deferred whole: its body-node anchor is unified and stable for Python and
+> TypeScript in both projections, so `config_use` lands there now; only Java's *Neo4j*
+> edge (`J_USES_CONFIG`) waits — on Java's v1→v2 projection migration (candidate 9), not
+> on candidate 2 — because Java's Neo4j projector still has no body-node label. See
+> "Starting now" and group D.
 
 Theme: **bring every `codeanalyzer-*` to canonical schema v2 consistently, then bring
 `python-sdk` to v2 with strong backwards compatibility.**
@@ -83,6 +96,10 @@ term coined twice is coined wrong permanently — this one is at three and risin
 | 12 | **`python-sdk` v2 model layer** — one `Node` / `Edge` / `Application` mirroring canonical v2, replacing the four per-language model packages | no — SDK model layer | C | 7, 8, or 9 (any one conformant analyzer) |
 | 13 | **Backwards-compatibility policy for the SDK** — what of the existing surface is preserved, how deprecation is signalled, how long the old models keep parsing | no — SDK contract | C | — |
 | 14 | SDK TypeScript Neo4j backend queries `(:Application)-[:HAS_MODULE]->(:Module)` while the analyzer emits `TSApplication` / `TS_HAS_MODULE` / `TSModule` | no — reconciliation | — | — |
+| 15 | **Repository-artifact inventory** — a non-source file node (`:PyArtifact` / `:JArtifact` / `:TSArtifact`) with kind/format/hash/size, raw-text capture policy + `--artifact-text` flag, and a documented discovery/exclusion policy. Anchors on the application node | yes — new node family, application-anchored | D | A |
+| 16 | **Dependency declarations** — normalized deps (`:*Dependency`) parsed from each ecosystem's manifests, plus the shared `scope` enum and its ecosystem mapping table (Maven/npm/pypi → runtime/dev/test/build/optional/unknown). References an artifact id | yes — new node + shared enum | D | A, 15 |
+| 17 | **Configuration definitions** — normalized config keys (`:*ConfigKey`) with a dotted key space and placeholder `references`. References an artifact id | yes — new node + key space | D | A, 15 |
+| 18 | **Configuration uses from code** — env/config reads anchored on a code node (`config_use` / `*_USES_CONFIG` from the body node), use→def linkage into candidate 17 by shared (`namespace`, `key`). All three languages in `analysis.json`; Neo4j for Py+TS now, Java's `J_USES_CONFIG` deferred to candidate 9 | yes — new edge + **body-node anchor** | A, D | A, 17; Java-Neo4j only: 9 |
 
 ## Collision groups
 
@@ -112,6 +129,25 @@ term coined twice is coined wrong permanently — this one is at three and risin
   "strong backwards compatibility" is a constraint on the new model's shape, not a
   wrapper bolted on afterwards.
 
+- **Group D — the repository-artifact layer**: candidates 15, 16, 17, 18.
+
+  One design session for the shared vocabulary, three-then-one implementation. The four
+  models share an id space that must be coined once: the artifact id that 16 and 17 both
+  reference back to, the ecosystem `scope` enum (16), and the config key space that 17
+  defines and 18 resolves against. Coining any of these per-analyzer is the parity trap.
+
+  The group **splits on where each model anchors**, and this is the key sequencing fact:
+  15, 16, 17 hang off the **application node**, which Group A leaves stable. Candidate 18
+  hangs off the **body node** — and the body node's state turned out to differ by
+  projection, which is what determines 18's split. Python's and TypeScript's body nodes
+  (`PyBodyNode`, `TSBodyNode`) are already unified and stable in **both** projections, so
+  `config_use` lands there in full now. Java's `JBodyNode` exists in its JSON emitter but
+  its *Neo4j* projector still runs off the legacy v1 IR with no body-node label — so only
+  `J_USES_CONFIG` is deferred, to Java's v1→v2 projection migration (candidate 9), not to
+  candidate 2. The edge name and its (`namespace`, `key`) join are coined once with D and
+  are identical across all three languages and both projections; only the Java-Neo4j
+  *projection* waits, so the parity clause is satisfied — nothing is renamed later.
+
 Candidates 7–11 and 14 consume vocabulary and coin none. They are sequencing, not
 contract.
 
@@ -129,6 +165,11 @@ contract.
 
     C  (12 SDK v2 model + 13 backcompat policy)   ◀── after any one conformant analyzer
      └─▶ (microservice initiative resumes here)
+
+    D  (15 artifact inventory ─▶ 16 dependencies, 17 config-definitions, 18 config-uses)  ◀── after A's catalog exists
+     │      15/16/17 application-anchored; 18 body-node-anchored — all designed in one session
+     └─▶ 18 config-uses: analysis.json all three + Neo4j Py/TS now
+              └─▶ J_USES_CONFIG (Java Neo4j edge only) ◀── waits on candidate 9's v1→v2 projection
 
     14 SDK TypeScript backend drift — independent; fix early, it is cheap and it makes
        candidate 8's result observable from the SDK
@@ -170,6 +211,10 @@ but the cost is carrying two model layers until the deprecation window closes.
   is coined here whether or not the microservice work starts.
 - **Non-HTTP service boundaries** — brokers, gRPC, GraphQL. Downstream of the deferred
   initiative.
+- **`J_USES_CONFIG` — Java's Neo4j config-use edge only.** Candidate 18 itself is in scope
+  now (see group D); what is deferred is just its projection onto Java's Neo4j graph, which
+  has no body-node label until Java's v1→v2 migration (candidate 9). The same facts ship in
+  Java's `analysis.json` meanwhile.
 - **`codeanalyzer-go` analysis levels L2 to L4** — Go's entry to this roadmap is
   candidate 11, being born conformant. Depth for Go is a separate initiative.
 - **Unified canonical SDK model classes replacing per-language facades** — candidate 12
@@ -188,3 +233,11 @@ whichever of candidates 7 through 11 is picked up once Group A's spec exists to 
 at — with candidate 14 available as a cheap independent starter at any time.
 
 Everything else on this roadmap has no issue yet, by design.
+
+**2026-08-26: group D's shared vocabulary (candidates 15–18) has been designed.** The spec
+is `docs/design/specs/repository-artifact-layer.md`, coining the artifact-id space, the
+ecosystem `scope` enum, the config key space, and the `config_use` edge across all three
+analyzers in one session. It lands into group A's v2 catalog, so A blocks implementation.
+Candidate 18 is scoped in with a per-projection split — `analysis.json` for all three
+languages and Neo4j for Python and TypeScript now, with only Java's `J_USES_CONFIG` waiting
+on candidate 9. No epic is filed until an analyzer implementation is actually picked up.
