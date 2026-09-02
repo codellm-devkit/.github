@@ -22,6 +22,7 @@
 - Named collections are JSON objects, edges are identity-only `{src,dst}`, and absent facts are omitted rather than serialized as `null`.
 - Analysis levels are additive: L1 source facts, L2 resolution facts, L3 profiles/renders/Kubernetes desired state. L4 is rejected.
 - Secret-derived output records key names and SHA-256 hashes only; no rendered Secret value is permitted in a derived node, diagnostic, or fixture.
+- The downstream backend acceptance gate must validate both pinned real-repository analyses against this JSON schema and semantic checker: `sample-daytrader/sample.daytrader.microservices@8a68b59430a94a242c54384763da9eb7682728b4` and `quarkuscoffeeshop/quarkuscoffeeshop-helm@aa3c842658e0fc7e44fa25132d8b817eab225cbe`. This is a consumer gate after the schema commit exists, not a network dependency of this schema repository's unit suite.
 
 ---
 
@@ -801,3 +802,5 @@ git status --short
 ```
 
 Expected: all tests and schema checks pass. Only intentional branch changes may appear in status. Record the exact `codeanalyzer-schema` commit in the `codeanalyzer-iac` module comment or README before starting the backend plan.
+
+After the backend plan reaches its live-repository task, preserve the emitted JSON for both pinned repositories and run it through this branch's `analysis.schema.json` plus `scripts/check_iac.py`. The schema plan is not accepted by the consumer until both documents pass structural and semantic validation without weakening either contract.

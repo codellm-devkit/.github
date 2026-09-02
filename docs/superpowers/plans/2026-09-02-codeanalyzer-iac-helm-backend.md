@@ -28,6 +28,8 @@
 - `HAS_ARTIFACT` and `DEFINES_CONFIG` are shared, upsert-only relationships. Never delete an Artifact, ConfigKey, Package, foreign label/property, or foreign relationship.
 - All relationships are identity-only. Relationship ordering, resolution reason, layer ordinal, and provenance live on nodes.
 - Use test-first cycles and do not advance from L1 to L2 or L2 to L3 while the current conformance gate is red.
+- Treat the DayTrader and Quarkus Coffee Shop repositories as mandatory live acceptance corpora. Tests clone the pinned commits over the network, analyze each repository root, validate JSON against the accepted schema and semantic checker, compare rendered resource identities with Helm 4.2.4, and prove filesystem/Neo4j graph-input parity. The production analyzer still never shells out to Helm or accesses the network.
+- Pinned live refs are `sample-daytrader/sample.daytrader.microservices@8a68b59430a94a242c54384763da9eb7682728b4` and `quarkuscoffeeshop/quarkuscoffeeshop-helm@aa3c842658e0fc7e44fa25132d8b817eab225cbe`. A scheduled `head` lane resolves each default branch and intentionally fails on semantic drift until expectations are reviewed; it never rewrites expectations automatically.
 
 ---
 
@@ -39,6 +41,7 @@ Create this repository layout; every file has one responsibility:
 codeanalyzer-iac/
 ├── .claude/SCHEMA_DECISIONS.md
 ├── .github/workflows/ci.yml
+├── .github/workflows/live.yml
 ├── .gitignore
 ├── cmd/codeanalyzer-iac/main.go
 ├── internal/cli/root.go
@@ -101,6 +104,10 @@ codeanalyzer-iac/
 ├── testdata/helm/profiles/
 ├── testdata/helm/render-failures/
 ├── testdata/helm/security/
+├── tests/live/acceptance_test.go
+├── tests/live/graph_test.go
+├── tests/live/harness_test.go
+├── tests/live/repositories.json
 ├── schema.json
 ├── schema.neo4j.json
 ├── LICENSE
@@ -529,7 +536,7 @@ func TestConfigOutsideSelectionIsInventoried(t *testing.T) {
 }
 ```
 
-Also create table tests for absolute input outside root, `..`, symlink escape, unreadable file, CRLF preservation, invalid UTF-8, empty text, and selecting one file directly.
+Also create table tests for absolute input outside root, `..`, symlink escape, unreadable file, CRLF preservation, invalid UTF-8, empty text, selecting one file directly, and excluding root VCS administration directories such as `.git` from a whole-repository selection.
 
 - [ ] **Step 2: Run tests to verify the filesystem source is absent**
 
@@ -552,7 +559,7 @@ type Source interface {
 
 - [ ] **Step 4: Implement workspace-root identity and safe walking**
 
-Resolve root and each selection with `filepath.Abs` plus `filepath.EvalSymlinks`, then require `filepath.Rel(root,resolved)` to be neither `..` nor `../...`. Walk directories without following symlinked directories. Dedupe on normalized app-relative POSIX path, sort paths, read raw bytes once, reject non-UTF-8 source with a diagnostic, and construct:
+Resolve root and each selection with `filepath.Abs` plus `filepath.EvalSymlinks`, then require `filepath.Rel(root,resolved)` to be neither `..` nor `../...`. Walk directories without following symlinked directories and skip VCS administration directories (`.git`, `.hg`, `.svn`) rather than ingesting checkout internals. Dedupe on normalized app-relative POSIX path, sort paths, read raw bytes once, reject non-UTF-8 source with a diagnostic, and construct:
 
 ```go
 artifact := &model.Artifact{
@@ -1467,7 +1474,127 @@ git commit -m "feat: project and reconcile IaC graphs"
 
 ---
 
-### Task 13: Complete end-to-end parity, fuzzing, CI, and analyzer documentation
+### Task 13: Prove exact Helm representation against live repositories
+
+**Files:**
+- Create: `codeanalyzer-iac/tests/live/repositories.json`
+- Create: `codeanalyzer-iac/tests/live/harness_test.go`
+- Create: `codeanalyzer-iac/tests/live/acceptance_test.go`
+- Create: `codeanalyzer-iac/tests/live/graph_test.go`
+- Create: `codeanalyzer-iac/.github/workflows/live.yml`
+- Modify: `codeanalyzer-iac/Makefile`
+- Modify: `codeanalyzer-iac/README.md`
+
+**Interfaces:**
+- Consumes: the production CLI/analyzer, JSON and graph contracts, a disposable Neo4j 5.x database, Git, the two public repositories, and Helm CLI 4.2.4 as an independent render oracle used only by tests.
+- Produces: `make test-live`, reproducible pinned-revision acceptance, an opt-in `CANIAC_LIVE_REF_MODE=head` drift lane, and exact filesystem/graph representation evidence.
+
+- [ ] **Step 1: Add the immutable live-repository manifest and failing harness tests**
+
+`repositories.json` records URL, pinned full commit, default branch, chart root, expected tracked-file count, and the application name. Use exactly:
+
+```json
+[
+  {
+    "name": "daytrader",
+    "url": "https://github.com/sample-daytrader/sample.daytrader.microservices.git",
+    "commit": "8a68b59430a94a242c54384763da9eb7682728b4",
+    "default_branch": "main",
+    "chart": "platform/helm",
+    "tracked_files": 21
+  },
+  {
+    "name": "quarkuscoffeeshop",
+    "url": "https://github.com/quarkuscoffeeshop/quarkuscoffeeshop-helm.git",
+    "commit": "aa3c842658e0fc7e44fa25132d8b817eab225cbe",
+    "default_branch": "master",
+    "chart": "charts/quarkuscoffeeshop-charts",
+    "tracked_files": 14
+  }
+]
+```
+
+Write tests first for malformed/short refs, unexpected origin, failed checkout, dirty checkout, missing chart roots, and Helm versions other than 4.2.4. The harness clones into `t.TempDir()`, verifies `HEAD`, inventories `git ls-files`, never reuses a developer checkout, and deletes its temporary clone through normal test cleanup. `CANIAC_LIVE_REF_MODE=head` selects the declared default branch but keeps every semantic assertion active.
+
+Run: `go test -tags=live ./tests/live -run TestHarness`
+
+Expected: FAIL because the manifest loader and checkout/oracle helpers do not exist.
+
+- [ ] **Step 2: Implement the isolated live harness**
+
+Implement subprocess boundaries for `git` and the test-only Helm oracle with explicit argument arrays, captured stdout/stderr, timeouts, and credential-free public URLs. Require Helm's reported semantic version to equal `v4.2.4`. Build `caniac` once into the test temp root, analyze the complete cloned repository with an explicit stable `--workspace-root` and `--app-name`, and exclude `.git` through the production filesystem walker—not by narrowing the live input to the chart directory.
+
+The harness writes an untracked `.caniac-live.yaml` typed config Artifact inside each temporary clone. It declares explicit release names/namespaces and named profiles so the same source material exercises default rendering and value-controlled branches. Graph-input tests seed this config Artifact along with all repository Artifacts.
+
+Run: `go test -tags=live ./tests/live -run TestHarness`
+
+Expected: PASS with pristine output.
+
+- [ ] **Step 3: Assert the DayTrader chart exactly**
+
+Analyze the repository root and require all 21 tracked files plus the generated config to exist as canonical `can://artifact/daytrader/...` Artifacts with matching source/digest. `docker-compose.yml`, `README.md`, and non-Helm files remain raw Artifacts without a Helm facet. Assert the Chart is `apiVersion:v1`, name `daytrader`, version `1.1.0`; all 13 template files belong to it; and source facts retain the conditional `.Values.psp.enabled` and `.Values.ocCreateRoute` references.
+
+Use explicit release `daytrader` and namespace `daytrader`. Compare the analyzer's canonical `(apiVersion,kind,namespace,name)` resource set and normalized document digest with independent `helm template` output for all three profiles:
+
+| profile | exact resource result |
+|---|---|
+| default | 5 Deployments + 5 Services = 10 |
+| `psp.enabled=true` | default plus 1 ClusterRole, 1 ClusterRoleBinding, 1 ServiceAccount = 13 |
+| `ocCreateRoute=true` | default plus 5 OpenShift Routes = 15 |
+
+The exact default names are `daytrader-{accounts,gateway,portfolios,quotes,web}` and `daytrader-{accounts,gateway,portfolios,quotes,web}-service`. Do not collapse the conditional Route documents or the PSP templates merely because they are absent from the default render.
+
+- [ ] **Step 4: Assert the Quarkus Coffee Shop chart exactly**
+
+Analyze the repository root and require all 14 tracked files plus the generated config as canonical Artifacts. `.github` workflow/configuration YAML and the repository README remain raw; only files under `charts/quarkuscoffeeshop-charts` gain Helm roles. Assert `apiVersion:v2`, type `application`, name `quarkuscoffeeshop-charts`, version `3.5.0`, and appVersion `5.0.3`.
+
+Require all six named templates from `_helpers.tpl` (`name`, `fullname`, `chart`, `labels`, `selectorLabels`, `serviceAccountName`) and resolution of every one of its eight `include` calls. Preserve 16 source resource-template documents across multi-document files and mark `templates/tests/test-connection.yaml` with both test and hook roles plus hook value `test-success`.
+
+For release `coffee` and namespace `quarkuscoffeeshop-demo`, compare exactly with Helm 4.2.4: 7 Deployments + 7 Services + 1 ServiceAccount + 1 test Pod = 16. Preserve the upstream Deployment name `quarkuscoffeshop-web` exactly, including its spelling, and distinguish it from Service `quarkuscoffeeshop-web`. Require helper-derived names `coffee-quarkuscoffeeshop-charts` and `coffee-quarkuscoffeeshop-charts-test-connection`. A second profile with `serviceAccount.create=false` must produce exactly 15 resources and retain the ServiceAccount source template as an L1 fact.
+
+- [ ] **Step 5: Prove schema validity and filesystem/graph equality for both repositories**
+
+For each repository, validate L1/L2/L3 JSON with the embedded accepted schema and run the accepted `scripts/check_iac.py` semantic checker against the L3 document. Seed a disposable Neo4j database with only the complete neutral Artifacts, their lowercase SHA-256 values, the generated config Artifact, and foreign labels/properties. Analyze the positional Neo4j URI using the config Artifact ID; compare canonical typed IaC node and identity-only edge row sets with filesystem mode exactly, then verify foreign facts remain unchanged.
+
+Also compare direct Cypher projection with the same row set. No test may replace exact row/resource equality with substring assertions or a golden generated by `caniac` itself.
+
+Run:
+
+```bash
+NEO4J_TEST_URI=neo4j://localhost:7687 \
+NEO4J_TEST_USERNAME=neo4j \
+NEO4J_TEST_PASSWORD=test-password \
+go test -tags=live ./tests/live -count=1
+```
+
+Expected: both external repositories pass schema, semantic, Helm-oracle, filesystem/graph, and foreign-fact preservation assertions.
+
+- [ ] **Step 6: Add pinned and moving-head CI lanes**
+
+Create `live.yml` with a pinned-ref job for pull requests and manual runs, and a weekly scheduled job using `CANIAC_LIVE_REF_MODE=head`. Install/check Helm 4.2.4 explicitly and provide Neo4j 5.x as a service. The moving-head lane reports the resolved commits and fails visibly on drift; it does not commit or upload regenerated expectations. Keep ordinary unit tests network-independent.
+
+Add `test-live` and `test-live-head` Make targets and document prerequisites, URLs, pins, exact chart paths, expected semantics, and how an intentional upstream change is reviewed before updating a pin/assertion.
+
+- [ ] **Step 7: Run and commit the live acceptance gate**
+
+Run both pinned and current-head modes locally against Helm 4.2.4 and the disposable database. If current head has advanced, record the resolved SHA and resulting mismatch without weakening pinned acceptance; update expectations only after inspecting the upstream diff.
+
+```bash
+make test-live
+CANIAC_LIVE_REF_MODE=head make test-live
+git diff --check
+```
+
+Expected: pinned mode passes. Head mode passes when the upstream default branches still satisfy the reviewed expectations, otherwise it fails with the exact semantic drift.
+
+```bash
+git add tests/live .github/workflows/live.yml Makefile README.md
+git commit -m "test: validate live Helm repositories"
+```
+
+---
+
+### Task 14: Complete end-to-end parity, fuzzing, CI, and analyzer documentation
 
 **Files:**
 - Modify: `codeanalyzer-iac/internal/cli/root_test.go`
@@ -1483,7 +1610,7 @@ git commit -m "feat: project and reconcile IaC graphs"
 
 **Interfaces:**
 - Consumes: all source, frontend, model, emit, and reconcile APIs from Tasks 1–12.
-- Produces: release-candidate conformance gates for `codeanalyzer-iac` 0.1.0.
+- Produces: release-candidate conformance gates for `codeanalyzer-iac` 0.1.0, including the live-repository acceptance from Task 13.
 
 - [ ] **Step 1: Write filesystem and graph-input parity tests**
 
@@ -1579,7 +1706,7 @@ go test ./internal/core -run TestOutputIndependentOfJobs -count=20
 git diff --check
 ```
 
-Then run the live Neo4j parity/integration job from Task 12. Expected: every command passes; repeated JSON, Cypher, and graph row sets are identical.
+Then run the live Neo4j parity/integration job from Task 12 and `make test-live` from Task 13. Expected: every command passes; repeated JSON, Cypher, and graph row sets are identical; both external Helm charts match the independent Helm 4.2.4 oracle.
 
 - [ ] **Step 8: Commit the release-candidate gates and docs**
 
@@ -1604,4 +1731,4 @@ make schema-check
 git status --short
 ```
 
-all succeed, the live Neo4j integration/parity suite passes, and status contains only intentional branch changes.
+all succeed, the live Neo4j integration/parity suite and pinned live-repository suite pass, both current upstream heads have been checked for drift, and status contains only intentional branch changes.
