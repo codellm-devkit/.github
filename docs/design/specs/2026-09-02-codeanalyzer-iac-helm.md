@@ -1,6 +1,6 @@
 # Spec: `codeanalyzer-iac` — shared IaC backend, Helm first
 
-Status: draft for maintainer review
+Status: approved for implementation
 Date: 2026-09-02
 Scope: new analyzer backend, shared IaC artifact contract, Helm source analysis and rendering
 
@@ -33,22 +33,24 @@ for example, remains canonically identified by `can://artifact/.../Chart.yaml` w
 `:IaCArtifact:HelmArtifact:HelmChart`. Semantic constructs inside the file are contained typed
 nodes with `can://iac/...` identities and source spans.
 
-The initial implementation is a typed Go application. The official Helm Go SDK supplies chart
-loading and rendering, while a compiled dialect registry keeps each frontend isolated behind one
-interface. Go is also the native ecosystem for planned HCL and BuildKit frontends. There is no
-runtime plugin ABI in the first release.
+The Helm-first implementation and common orchestration core are typed Go. The official Helm Go SDK
+supplies chart loading and rendering, while a compiled dialect registry keeps each frontend isolated
+behind one interface and routes typed deltas through the shared orchestration pipeline. Future
+dialect frontends may be embedded Go components or versioned native-runtime workers that emit the
+same typed delta contract. There is no runtime plugin ABI in the first release.
 
 ---
 
 ## 2. Contract-impact triage
 
-**Does this change schema v2 output?** Yes. It adds an optional typed IaC facet to the neutral
-`Artifact` family, new contained node kinds, new identity forms under `can://iac/`, and new typed
-edge families. It does not rename or repurpose the code-analysis spine. `Artifact.kind` remains
-`"artifact"`; the concrete interpretation is carried by the facet and, in Neo4j, by additional
-labels.
+**Does this change schema v2 output?** No existing language analyzer changes its schema-v2 output.
+The new backend owns a separate IaC schema-v2 branch that composes with the existing neutral
+`Artifact` contract. That branch adds an optional typed IaC facet, new contained node kinds, new
+identity forms under `can://iac/`, and new typed edge families. It does not rename or repurpose the
+code-analysis spine. `Artifact.kind` remains `"artifact"`; the concrete interpretation is carried
+by the facet and, in Neo4j, by additional labels.
 
-**Change type:** new analyzer plus additive shared-schema evolution.
+**Change type:** new analyzer plus additive IaC contract registration; no existing analyzer migration.
 
 | Repo | Change | Reason |
 | --- | --- | --- |
@@ -86,7 +88,7 @@ could be completed without another round of leaf-level confirmations.
 
 | # | Decision | Rationale |
 | --- | --- | --- |
-| D1 | **One `codeanalyzer-iac` backend, many compiled dialect frontends. Helm ships first.** | Cross-dialect relationships are the value of an IaC graph; separate repositories would duplicate discovery, identity, reconciliation, and projection. |
+| D1 | **One `codeanalyzer-iac` backend, one compiled registry, many dialect frontends. Helm ships first.** | Cross-dialect relationships are the value of an IaC graph; separate repositories would duplicate discovery, identity, reconciliation, and projection. |
 | D2 | **Two input modes:** arbitrary filesystem roots and a prepopulated Neo4j graph. | Repositories have no universal infrastructure directory, and existing language analyzers may already have captured every config file as an `Artifact`. |
 | D3 | **Graph mode reads complete `Artifact.source` from Neo4j and verifies it against `sha256`.** | Source is the agreed graph contract. A filesystem/content-provider fallback would make graph-only analysis non-reproducible. |
 | D4 | **Unknown files remain raw `Artifact` records. Recognition enriches; it never replaces.** | Future frontends can reinterpret already captured assets without an ID migration or a destructive re-ingest. |
@@ -536,16 +538,18 @@ the first train; unpacked vendored charts are supported.
 ### 6.3 CLI
 
 ```text
-codeanalyzer-iac analyze [PATH ...] --app-name NAME [--workspace-root PATH] [--config REL_PATH]
-codeanalyzer-iac enrich --neo4j-uri URI --app-name NAME [--config ARTIFACT_ID]
+caniac [PATH ...] --app-name NAME [--workspace-root PATH] [--config PATH_OR_ARTIFACT_ID]
 ```
 
-`analyze` defaults to `.` when no path is supplied and may receive several files or directories.
-`--workspace-root` defaults to the current directory. `--config` is resolved relative to that
-root and is inventoried as an artifact even when it lies outside the ordinary input filters. The
-command emits JSON and may also write Neo4j. `enrich` requires no filesystem root and selects all
-artifact IDs under `can://artifact/<app-name>/`. `--app-name` is mandatory in graph mode; a name
-that does not resolve fails with an actionable list rather than enriching an arbitrary application.
+The command defaults to `.` when no path is supplied and may receive several files or directories.
+When the path is a Neo4j URI, it implicitly runs in graph mode and enriches the selected application;
+otherwise it analyzes the supplied filesystem paths. `--workspace-root` defaults to the current
+directory and applies only in filesystem mode. In filesystem mode, `--config` is resolved relative
+to that root and is inventoried as an artifact even when it lies outside the ordinary input filters.
+In graph mode, `--config` selects an existing config artifact by ID or app-relative path. The command
+emits JSON and may also write Neo4j. Graph mode selects all artifact IDs under
+`can://artifact/<app-name>/`. `--app-name` is mandatory in graph mode; a name that does not resolve
+fails with an actionable list rather than enriching an arbitrary application.
 
 Common output modes are compact JSON/stdout, `analysis.json`, Cypher, direct Bolt, and schema
 catalog. Secrets never appear in logs or diagnostics. Connection credentials are accepted through
@@ -629,11 +633,11 @@ Release order:
 
 1. **Shared contract:** add the v2 IaC schema/catalog fixtures to `codeanalyzer-schema`.
 2. **`codeanalyzer-iac` 0.1.0:** repository foundation, both ingestion modes, identity,
-   non-destructive Neo4j reconciliation, L1 Helm artifact/chart/value/template model, and L2
-   reference/dependency resolution, with JSON/Neo4j parity.
-3. **`codeanalyzer-iac` 0.2.0:** config artifacts, default/explicit render profiles, L3 Helm
-   evaluation, diagnostics, Kubernetes resources/addresses, and sensitive-derived-data policy.
-4. **Documentation:** CLI and graph-query guide after 0.2.0 behavior is released.
+   non-destructive Neo4j reconciliation, L1 Helm artifact/chart/value/template model, L2
+   reference/dependency resolution, L3 Helm evaluation, diagnostics, Kubernetes
+   resources/addresses, sensitive-derived-data policy, config artifacts, and default/explicit
+   render profiles, with JSON/Neo4j parity.
+3. **Documentation:** CLI and graph-query guide after 0.1.0 behavior is released.
 
 There is no lockstep release with Python, TypeScript, or Java analyzers. The shared join contract
 is their already-shipped `can://artifact/<app>/<path>` identity and complete `source`; they do not
