@@ -105,12 +105,41 @@ enforces it and the prose becomes a description rather than a guard.
 
 ## 5. What retires
 
-- **`_module`**, and every index on it. `codeanalyzer-java#217` — "add the missing `_module`
-  indexes" — is resolved by deleting the property rather than by indexing it.
+- **`_module` as an emitted property**, and every index on it. `codeanalyzer-java#217` — "add the
+  missing `_module` indexes" — is resolved by deleting the property rather than by indexing it.
 - **The label list as a correctness device.** Java's `MODULE_OWNED` and python's
   `MODULE_OWNED_PATTERN` exist to stop a match reaching a sibling's graph. The prefix does that.
 - **The `NOT n:CanNode` legacy-wipe predicate** in typescript, which describes foreign nodes exactly
   as precisely as it describes stale local ones.
+
+### What does NOT retire: the grouping itself
+
+The property leaves the graph; the *association* does not leave the writer. Every analyzer still has
+to group nodes by owning module to drive the incremental diff, and the graph was simply never the
+right place to keep that. Java moved it to a field on the in-memory node row, lifted off the emitted
+properties at the single row-building choke point so no projector call site changed — recommended
+over touching each one.
+
+Two things learned there that the other two will hit:
+
+- **The module id cannot be recovered by splitting a declaration's id.** A file key may itself
+  contain `/` (java's `CanId` says so explicitly), so there is no reliable separator to split on.
+  Take the module id from the module's own row instead.
+- **In typescript `_module` is also read back from the database**, keying the `content_hash` diff
+  (`MATCH (m:TSModule) RETURN m._module AS k, m.content_hash AS h`). Retiring it there means
+  rewiring a database-side query to key on the module id, not just an in-memory rename. That work
+  has no analogue in java or python.
+
+### Legacy ids that are not `can://` ids
+
+An analyzer emitting ids in an older, non-`can://` shape cannot prefix-scope those at all: java's v1
+ids are FQN-shaped (`com.l4.Chain#a(int)@5:16`) and carry no application segment.
+
+**Resolved by dropping the legacy purge, not by keeping a second mechanism for it.** Java's v2 is the
+schema as of its 3.0.0, so a v1 push now upserts and never deletes, and logs that it skipped. Keeping
+the old label-anchored path alive would have meant two scoping mechanisms, one of them the weaker one
+this spec exists to remove. Any analyzer with a comparable legacy shape should do the same rather
+than special-case it.
 
 ## 6. Mechanics that must not be got wrong
 
