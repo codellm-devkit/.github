@@ -38,11 +38,13 @@ other than identity.
 | --- | --- |
 | codeanalyzer-typescript#116 | `MATCH (n) WHERE n._module IS NOT NULL AND NOT n:CanNode DETACH DELETE n` deleted the java and python graphs outright. Surfaced only as an out-of-memory error, because the delete was large enough to exhaust `dbms.memory.transaction.total.max` and roll back. A smaller foreign graph would have gone silently. |
 | codeanalyzer-java#213 | `MATCH (x {_module: $m}) DETACH DELETE x` — unlabelled — deleted a sibling analyzer's nodes wherever a file key collided across languages. |
-| unfiled, found while writing this | java's per-module purge, *after* #213, is still application-blind: `_module` is a bare project-relative path, so two java applications in one database that both contain `src/main/java/Foo.java` delete each other's nodes for that file. |
+| unfiled, found while writing this | **all three** analyzers' per-module purges are application-blind. `_module` is a bare project-relative path, so two applications *in the same language* that both contain `src/main/java/Foo.java` (or its equivalent) delete each other's nodes for that file. Typescript's own comment — *"a sibling analyzer's nodes sharing this `_module` key are never in scope"* — is true across languages and false across applications. |
 
-The first two were fixed by adding labels to the match. That treats the symptom: it makes the
-statement match fewer wrong things, while leaving scope expressed by a property that carries no
-language, no application, and no guarantee. The third is what remains when you fix it that way.
+The first two are fixed — typescript in `c1c27f3`, java in #213 — and both were fixed by adding
+labels to the match. That treats the symptom: it makes the statement match fewer wrong things, while
+leaving scope expressed by a property that carries no language, no application, and no guarantee.
+The third is what remains in all three analyzers when you fix it that way, and it is the one a label
+cannot fix at all, because both applications' nodes carry the same labels.
 
 ## 2. Contract-Impact Triage
 
@@ -67,7 +69,7 @@ every analyzer's own stated bump policy, even though the property is internal by
 | purge anchored on | 15-label disjunction | 6-label disjunction | `:CanNode` |
 | app-scoped purge | **no** | **no** | yes (`id STARTS WITH`) |
 | `_module` indexes | **none** | one per label | one (`:CanNode`) |
-| deletion gated on `--eager` | **no** | no | yes |
+| deletion gated on `--eager` | **no** | **no** | yes, on every destructive path |
 | shared merge label | `JSymbol` (3 of 11 labels) | `PySymbol` (3 of 10) | `CanNode` (all) |
 
 Java and python arrived at the same design independently — a *semantic* shared label covering
@@ -140,8 +142,11 @@ enforces it and the prose becomes a description rather than a guard.
    query is wanted, carry both labels (`:CanNode:JCanNode`) — prunes anchor on the narrow one,
    consumers match the wide one. Add the shared label when a consumer needs it, not before.
 
-   Note for java specifically: `JCanNode`, not `JSCanNode` — `JS` collides with JavaScript in a
-   database where the typescript analyzer is also pointed at `.js` files.
+   One marker per language namespace, not per repository: `JCanNode` (java), `PyCanNode` (python),
+   `TSCanNode` (typescript), `JSCanNode` (javascript). The typescript analyzer emits two of these,
+   because it covers two language namespaces — the marker follows the `<lang>` segment of the id it
+   anchors, so that a prefix predicate and its anchor can never disagree about which language a node
+   belongs to.
 4. **Batching.** Deleting an application in one transaction exhausts
    `dbms.memory.transaction.total.max` — measured at 2.7 GiB in typescript#116. Use
    `CALL { ... } IN TRANSACTIONS OF N ROWS`.
@@ -182,8 +187,9 @@ Docs follow the last analyzer.
 
 ## 9. Open questions for review
 
-1. **Does any SDK read `_module`?** Asserted nowhere in this spec; must be checked in each SDK's
-   Neo4j backend before the property is removed.
+1. ~~Does any SDK read `_module`?~~ **Decided: `_module` is dropped.** Each analyzer should still
+   grep its SDK's Neo4j backend while implementing, so a consumer that reads it is updated in the
+   same train rather than discovered afterwards — but the removal is not conditional on the answer.
 2. **Should `--eager` become the universal gate?** TypeScript already refuses to delete without it:
    *"managing the database's lifetime is the operator's call, not the analyzer's."* Java and python
    delete unconditionally. Adopting it is a behaviour change beyond scoping, and it is the other
