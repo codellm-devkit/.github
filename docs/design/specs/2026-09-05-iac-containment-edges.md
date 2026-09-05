@@ -29,7 +29,7 @@ disconnected islands in Neo4j.
 
 | Question | Answer |
 | --- | --- |
-| Changes `analysis.json` shape? | No. Nesting under `resource_templates{}`, `lookup_references{}`, `aliases[]` is unchanged. |
+| Changes `analysis.json` shape? | Additively: `application.edges` gains three keys (`iac_has_resource_template`, `iac_has_lookup_reference`, `iac_has_alias`), each an `EdgeMap`, declared in `analysis.schema.json`. Node nesting under `resource_templates{}`, `lookup_references{}`, `aliases[]` is unchanged. |
 | Changes the Neo4j catalog? | Yes, additive: three new relationship types. No label, property, constraint, or index changes. |
 | Catalog version | Stays 1.0.0 (decision, §4). |
 | Repos touched | `codeanalyzer-schema` (catalog, semantic checker, fixtures); `codeanalyzer-iac` (embedded catalog copy, projector, accepted-edge tests). |
@@ -78,15 +78,17 @@ resource templates are reachable from their file even without provenance.
 
 ### `codeanalyzer-schema` (codellm-devkit/codeanalyzer-schema#2)
 
-- `v2/iac/neo4j/schema.neo4j.json`: add the three `relationship_types` entries; `schema_version`
-  unchanged.
+- `v2/iac/neo4j/schema.neo4j.sample.json` (the accepted catalog the analyzer embeds byte-for-byte):
+  add the three `relationship_types` entries; `schema_version` unchanged.
+- `v2/iac/json/analysis.schema.json`: add the three `edges` keys as `EdgeMap` (the `edges` object is
+  closed, so an undeclared key is a validation failure).
 - `scripts/check_iac.py`: extend the containment invariant that today covers
   `value_references` (`_require_edge(..., "iac_has_value_reference", ...)`) to
   `resource_templates`, `lookup_references`, and `aliases`, in both directions; extend the
   projected-label endpoint check so the new types accept only the families above.
 - `tests/test_check_iac.py`: one positive fixture and one negative fixture (missing edge,
   dangling edge, wrong endpoint label) per new type.
-- Conformance fixtures under `v2/iac/json` regenerated or hand-edited to carry the edges.
+- Sample documents `v2/iac/json/analysis.l{1,2,3}.sample.json` carry the edges from L1 onward.
 - Accept and record the new schema commit on the issue.
 
 ### `codeanalyzer-iac` (child filed when picked up)
