@@ -73,7 +73,7 @@ Each analyzer is a standalone CLI. All four ship on PyPI, so `pip install` works
 
 | Repository | Language | CLI | Install |
 | --- | --- | --- | --- |
-| [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) | Java / Jakarta EE (source or bytecode), via WALA and JavaParser. The wheel bundles a JVM; the installer needs Java 11+. | `canjv` | `pip install codeanalyzer-java`<br>`curl --proto '=https' --tlsv1.2 -LsSf https://github.com/codellm-devkit/codeanalyzer-java/releases/latest/download/codeanalyzer-installer.sh \| sh` |
+| [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) | Java / Jakarta EE (source or bytecode), via WALA and JavaParser. The wheel bundles a JVM; the installer needs Java 11+. | `canjv` | `pip install codeanalyzer-java`<br>`brew install codellm-devkit/tap/codeanalyzer-java`<br>`curl --proto '=https' --tlsv1.2 -LsSf https://github.com/codellm-devkit/codeanalyzer-java/releases/latest/download/codeanalyzer-installer.sh \| sh` |
 | [codeanalyzer-python](https://github.com/codellm-devkit/codeanalyzer-python) | Python. Symbol table, call graph, and native CFG/PDG/SDG dataflow. | `canpy` | `pip install codeanalyzer-python`<br>`pip install "codeanalyzer-python[neo4j]"`<br>`brew install codellm-devkit/tap/codeanalyzer-python` |
 | [codeanalyzer-typescript](https://github.com/codellm-devkit/codeanalyzer-typescript) | TypeScript / JavaScript. Symbols, call graph, types, decorators, and intra/interprocedural dataflow. | `cants` | `pip install codeanalyzer-typescript`<br>`brew install codellm-devkit/tap/codeanalyzer-typescript` |
 | [codeanalyzer-iac](https://github.com/codellm-devkit/codeanalyzer-iac) | Infrastructure as Code, starting with Helm charts. Rendered-resource graph with typed configuration facets. | `caniac` | `pip install codeanalyzer-iac`<br>`brew install codellm-devkit/tap/codeanalyzer-iac` |
@@ -89,11 +89,7 @@ Under active development or exploratory. APIs, output, and packaging may change 
 - [codeanalyzer-rust](https://github.com/codellm-devkit/codeanalyzer-rust) - static analysis backend for Rust, built on the compiler's IR
 - [codeanalyzer-kotlin](https://github.com/codellm-devkit/codeanalyzer-kotlin) - static analysis backend for Kotlin
 - [codeanalyzer-swift](https://github.com/codellm-devkit/codeanalyzer-swift) - static analysis backend for Swift
-- [codeanalyzer-abap](https://github.com/codellm-devkit/codeanalyzer-abap) - static analysis backend for ABAP
-- [codeanalyzer-codeql](https://github.com/codellm-devkit/codeanalyzer-codeql) - multi-language backend on top of CodeQL
 - [typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - TypeScript SDK
-- [cocoa-mcp](https://github.com/codellm-devkit/cocoa-mcp) - Code Context Agent and toolbox MCP server (Python)
-- [cocoa-ts](https://github.com/codellm-devkit/cocoa-ts) - Code Context Agent and toolbox MCP client/server (TypeScript)
 
 ### Tooling & docs
 
