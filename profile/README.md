@@ -69,11 +69,11 @@ Swap `CLDK.python(...)` for `CLDK.java(...)` or `CLDK.typescript(...)` — the q
 
 ### Analyzers
 
-Each analyzer is a standalone CLI. Python, TypeScript, and IaC ship on PyPI as prebuilt binaries, so `pip install` works without a language toolchain; Homebrew formulas live in [homebrew-tap](https://github.com/codellm-devkit/homebrew-tap). Java ships as a JAR with a one-line installer.
+Each analyzer is a standalone CLI. All four ship on PyPI, so `pip install` works without a language toolchain: Python, TypeScript, and IaC as prebuilt binaries, Java as a JAR with a bundled JVM. Homebrew formulas live in [homebrew-tap](https://github.com/codellm-devkit/homebrew-tap); Java also has a one-line installer for the bare JAR.
 
 | Repository | Language | CLI | Install |
 | --- | --- | --- | --- |
-| [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) | Java / Jakarta EE (source or bytecode), via WALA and JavaParser. Requires a Java 11+ runtime. | `codeanalyzer` | `curl --proto '=https' --tlsv1.2 -LsSf https://github.com/codellm-devkit/codeanalyzer-java/releases/latest/download/codeanalyzer-installer.sh \| sh` |
+| [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) | Java / Jakarta EE (source or bytecode), via WALA and JavaParser. The wheel bundles a JVM; the installer needs Java 11+. | `canjv` | `pip install codeanalyzer-java`<br>`curl --proto '=https' --tlsv1.2 -LsSf https://github.com/codellm-devkit/codeanalyzer-java/releases/latest/download/codeanalyzer-installer.sh \| sh` |
 | [codeanalyzer-python](https://github.com/codellm-devkit/codeanalyzer-python) | Python. Symbol table, call graph, and native CFG/PDG/SDG dataflow. | `canpy` | `pip install codeanalyzer-python`<br>`pip install "codeanalyzer-python[neo4j]"`<br>`brew install codellm-devkit/tap/codeanalyzer-python` |
 | [codeanalyzer-typescript](https://github.com/codellm-devkit/codeanalyzer-typescript) | TypeScript / JavaScript. Symbols, call graph, types, decorators, and intra/interprocedural dataflow. | `cants` | `pip install codeanalyzer-typescript`<br>`brew install codellm-devkit/tap/codeanalyzer-typescript` |
 | [codeanalyzer-iac](https://github.com/codellm-devkit/codeanalyzer-iac) | Infrastructure as Code, starting with Helm charts. Rendered-resource graph with typed configuration facets. | `caniac` | `pip install codeanalyzer-iac`<br>`brew install codellm-devkit/tap/codeanalyzer-iac` |
