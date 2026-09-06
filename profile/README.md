@@ -37,7 +37,6 @@ Every language is analyzed by a dedicated `codeanalyzer-*` engine that emits the
 ## Getting Started
 
 - 📚 Read the [documentation](https://codellm-devkit.info) for guides, core concepts, and common tasks
-- ✨ Browse [examples and tutorials](https://github.com/codellm-devkit/cldk-tutorial)
 - 💻 Install the Python SDK and query your project:
 
 ```bash
@@ -94,7 +93,6 @@ Under active development or exploratory. APIs, output, and packaging may change 
 ### Tooling & docs
 
 - [docs](https://github.com/codellm-devkit/docs) - source for [codellm-devkit.info](https://codellm-devkit.info)
-- [cldk-tutorial](https://github.com/codellm-devkit/cldk-tutorial) - worked examples and notebooks
 - [cldk-devtools](https://github.com/codellm-devkit/cldk-devtools) - agent skills for extending and maintaining CLDK
 - [homebrew-tap](https://github.com/codellm-devkit/homebrew-tap) - Homebrew formulas for the analyzers
 
