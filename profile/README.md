@@ -26,17 +26,18 @@
 <p align="center">
   <a href="https://codellm-devkit.info">Documentation</a> |
   <a href="https://codellm-devkit.info/quickstart/">Quickstart</a> |
-  <a href="https://github.com/orgs/codellm-devkit/discussions">Discussions</a>
+  <a href="https://github.com/orgs/codellm-devkit/discussions">Discussions</a> |
+  <a href="https://discord.gg/zEjz9YrmqN">Discord</a>
 </p>
 
-CodeLLM-DevKit (CLDK) loads a codebase and hands you back a typed object model of it with classes, methods, fields, and call graphs (among other things) through **one consistent `analysis` object**. Instead of token-heavy crawls through files to answer questions like "what calls this method?" or "is this code reachable?", agents and developers can run precise, deterministic lookups against the actual program. The result is grounded answers from ground truth rather than approximations from grepping.
+CodeLLM-DevKit (CLDK) loads a codebase and hands you back a typed object model of it — classes, methods, fields, call graphs, and dataflow — through **one consistent `analysis` object**. Instead of token-heavy crawls through files to answer questions like "what calls this method?" or "is this code reachable?", agents and developers run precise, deterministic lookups against the actual program. The result is grounded answers from ground truth rather than approximations from grepping.
 
-Java, Python, and TypeScript are supported today, with Go, Rust, and C in development.
+Every language is analyzed by a dedicated `codeanalyzer-*` engine that emits the same [canonical schema](https://github.com/codellm-devkit/codeanalyzer-schema) — as `analysis.json` or as a Neo4j property graph — and the SDK normalizes it into the same typed API. Java, Python, TypeScript/JavaScript, and Infrastructure as Code (Helm) ship today; Go, Rust, C/C++, and more are in development.
 
 ## Getting Started
 
-- 📚 Read the [Documentation](https://codellm-devkit.info) for guides, core concepts, and common tasks
-- ✨ Browse usage [examples and tutorials](https://github.com/codellm-devkit/cldk-tutorial)
+- 📚 Read the [documentation](https://codellm-devkit.info) for guides, core concepts, and common tasks
+- ✨ Browse [examples and tutorials](https://github.com/codellm-devkit/cldk-tutorial)
 - 💻 Install the Python SDK and query your project:
 
 ```bash
@@ -56,16 +57,50 @@ print(len(analysis.get_classes()), "classes")
 print(analysis.get_call_graph())
 ```
 
-Swap `CLDK.python(...)` for `CLDK.java(...)` or `CLDK.typescript(...)` — the query API is the same across languages. The Java backend is bundled, so analyzing Java projects needs only a JDK on your `PATH`.
+Swap `CLDK.python(...)` for `CLDK.java(...)` or `CLDK.typescript(...)` — the query API is the same across languages. The Python and TypeScript analyzers install as dependencies and the Java analyzer is bundled, so `pip install cldk` is all you need — analyzing Java projects only needs a JDK on your `PATH`.
 
-## Project Structure
+## Repositories
 
-- [python-sdk](https://github.com/codellm-devkit/python-sdk) - official Python SDK ([`cldk` on PyPI](https://pypi.org/project/cldk/))
-- [typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - official TypeScript SDK (experimental)
-- [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) - static analysis for Java/JavaEE using WALA and JavaParser
-- [codeanalyzer-python](https://github.com/codellm-devkit/codeanalyzer-python) - static analysis backend for Python
-- [codeanalyzer-typescript](https://github.com/codellm-devkit/codeanalyzer-typescript) - static analysis backend for TypeScript/JavaScript
-- [cldk-tutorial](https://github.com/codellm-devkit/cldk-tutorial) - start building with CLDK
+### Python SDK
+
+| Repository | What it is | Install |
+| --- | --- | --- |
+| [python-sdk](https://github.com/codellm-devkit/python-sdk) | The official Python SDK. Typed facades over every analyzer below, plus a read-only Neo4j backend for graphs populated out of band. | `pip install cldk`<br>`pip install "cldk[neo4j]"` |
+
+### Analyzers
+
+Each analyzer is a standalone CLI. Python, TypeScript, and IaC ship on PyPI as prebuilt binaries, so `pip install` works without a language toolchain; Homebrew formulas live in [homebrew-tap](https://github.com/codellm-devkit/homebrew-tap). Java ships as a JAR with a one-line installer.
+
+| Repository | Language | CLI | Install |
+| --- | --- | --- | --- |
+| [codeanalyzer-java](https://github.com/codellm-devkit/codeanalyzer-java) | Java / Jakarta EE (source or bytecode), via WALA and JavaParser. Requires a Java 11+ runtime. | `codeanalyzer` | `curl --proto '=https' --tlsv1.2 -LsSf https://github.com/codellm-devkit/codeanalyzer-java/releases/latest/download/codeanalyzer-installer.sh \| sh` |
+| [codeanalyzer-python](https://github.com/codellm-devkit/codeanalyzer-python) | Python. Symbol table, call graph, and native CFG/PDG/SDG dataflow. | `canpy` | `pip install codeanalyzer-python`<br>`pip install "codeanalyzer-python[neo4j]"`<br>`brew install codellm-devkit/tap/codeanalyzer-python` |
+| [codeanalyzer-typescript](https://github.com/codellm-devkit/codeanalyzer-typescript) | TypeScript / JavaScript. Symbols, call graph, types, decorators, and intra/interprocedural dataflow. | `cants` | `pip install codeanalyzer-typescript`<br>`brew install codellm-devkit/tap/codeanalyzer-typescript` |
+| [codeanalyzer-iac](https://github.com/codellm-devkit/codeanalyzer-iac) | Infrastructure as Code, starting with Helm charts. Rendered-resource graph with typed configuration facets. | `caniac` | `pip install codeanalyzer-iac`<br>`brew install codellm-devkit/tap/codeanalyzer-iac` |
+
+All analyzers also read and write the shared contract in [codeanalyzer-schema](https://github.com/codellm-devkit/codeanalyzer-schema).
+
+### Experimental
+
+Under active development or exploratory. APIs, output, and packaging may change without notice.
+
+- [codeanalyzer-go](https://github.com/codellm-devkit/codeanalyzer-go) - static analysis backend for Go
+- [codeanalyzer-clang](https://github.com/codellm-devkit/codeanalyzer-clang) - static analysis backend for the C language family
+- [codeanalyzer-rust](https://github.com/codellm-devkit/codeanalyzer-rust) - static analysis backend for Rust, built on the compiler's IR
+- [codeanalyzer-kotlin](https://github.com/codellm-devkit/codeanalyzer-kotlin) - static analysis backend for Kotlin
+- [codeanalyzer-swift](https://github.com/codellm-devkit/codeanalyzer-swift) - static analysis backend for Swift
+- [codeanalyzer-abap](https://github.com/codellm-devkit/codeanalyzer-abap) - static analysis backend for ABAP
+- [codeanalyzer-codeql](https://github.com/codellm-devkit/codeanalyzer-codeql) - multi-language backend on top of CodeQL
+- [typescript-sdk](https://github.com/codellm-devkit/typescript-sdk) - TypeScript SDK
+- [cocoa-mcp](https://github.com/codellm-devkit/cocoa-mcp) - Code Context Agent and toolbox MCP server (Python)
+- [cocoa-ts](https://github.com/codellm-devkit/cocoa-ts) - Code Context Agent and toolbox MCP client/server (TypeScript)
+
+### Tooling & docs
+
+- [docs](https://github.com/codellm-devkit/docs) - source for [codellm-devkit.info](https://codellm-devkit.info)
+- [cldk-tutorial](https://github.com/codellm-devkit/cldk-tutorial) - worked examples and notebooks
+- [cldk-devtools](https://github.com/codellm-devkit/cldk-devtools) - agent skills for extending and maintaining CLDK
+- [homebrew-tap](https://github.com/codellm-devkit/homebrew-tap) - Homebrew formulas for the analyzers
 
 ## Contributing
 
@@ -75,7 +110,7 @@ Have questions? Join the discussion in our [community forum](https://github.com/
 
 ## Reference
 
-To cite Codellm-Devkit, please use the following reference:
+To cite CodeLLM-DevKit, please use the following reference:
 
 ```bibtex
 @article{krishna2024codellm,
@@ -88,7 +123,7 @@ To cite Codellm-Devkit, please use the following reference:
 
 ## IBM Public Repository Disclosure
 
-Codellm-devkit is an open source project from [IBM Research](https://github.com/IBM) and open to contributions from the entire community. All content in these repositories including code has been provided by IBM under the associated open source software license and IBM is under no obligation to provide enhancements, updates, or support. IBM developers produced this code as an open source project (not as an IBM product), and IBM makes no assertions as to the level of quality nor security.
+CodeLLM-DevKit is an open source project from [IBM Research](https://github.com/IBM) and open to contributions from the entire community. All content in these repositories including code has been provided by IBM under the associated open source software license and IBM is under no obligation to provide enhancements, updates, or support. IBM developers produced this code as an open source project (not as an IBM product), and IBM makes no assertions as to the level of quality nor security.
 
 ## Contact
 
