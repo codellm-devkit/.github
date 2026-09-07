@@ -56,7 +56,9 @@ node reachable from `application` by containment.
 | `application.entrypoint_report{}` | `analysis.json` | typed field on the root |
 | `J_USES_CONFIG` | Neo4j | new relationship type |
 | `J_READS_CONFIG_UNRESOLVED` | Neo4j | new relationship type |
+| `entrypoint_frameworks` on `type` and `callable` | `analysis.json` | typed field (see D5a) |
 | `entrypoint_frameworks`, `entrypoint_report_json` | Neo4j `:JApplication` | new node properties |
+| `entrypoint_frameworks` | Neo4j `:JType`, `:JCallable` | new node property |
 
 **Repos affected.**
 
@@ -133,6 +135,24 @@ unresolved-read list exists to prevent.
 shape but invents a body-node `kind` with no AST region behind it, which is a new entry in the
 shared node-kind vocabulary — a higher parity cost than widening one endpoint list.
 
+**Two shapes this decision left open, settled during implementation.**
+
+*An unresolved annotation read has no callee to ghost.* `@Value("${undeclared.key}")` is routine —
+the value comes from the environment rather than a checked-in file — but `J_READS_CONFIG_UNRESOLVED`
+runs to a `:JExternal` ghost of the callee, and an annotation is not a call. Decided: **ghost the
+annotation type** (`can://java/<app>/@external/org.springframework.beans.factory.annotation.Value/value()`).
+An annotation is not literally a callee, but `@Value` injection *is* a read and the ghost names what
+performed it, so every unresolved read projects one edge shape rather than some carrying no endpoint
+at all. Rejected: using the existing `:JAnnotation` node, which would widen `dst` to a union too; and
+projecting no edge, which would leave the read visible in `analysis.json` and invisible in the graph
+— the exact backend split #231 complained about.
+
+*`@ConfigurationProperties("datasource")` binds a prefix, not a key.* Python has no prefix-binding
+idiom, so there is no precedent to match. Decided: **one `J_USES_CONFIG` per declared key beneath the
+prefix**, because `get_config_readers("datasource.url")` finding the binding class is the accessor's
+actual question. Fan-out is bounded by the declared key set. Rejected: a single edge naming the
+prefix, since no `:ConfigKey` node exists for a bare prefix and the `dst` would dangle.
+
 ### D2 — Naming: `J_` prefix
 
 `J_USES_CONFIG` and `J_READS_CONFIG_UNRESOLVED`, matching python's `PY_`-prefixed pair and Java's
@@ -155,12 +175,38 @@ nothing in the literal tier needs a call graph.
 - **L1** — literal tier. A detector-matched read whose key argument is a string literal (or an
   annotation whose value is a literal `${...}` placeholder), resolved against the declared
   `:ConfigKey` set. `prov: ["literal"]`.
-- **L3/L4** — dataflow tier. Widen the set using the DDG: a key argument that is a local flowing
-  from a literal resolves too. `prov: ["dataflow"]`.
+- **L3** — intra tier. A bare-name key closes when every DDG-reaching definition at the call site is
+  the same single string literal. `prov: ["dataflow"]`.
+- **L4** — interprocedural tier. A key naming a parameter closes when the callable never rebinds it
+  and *every* call site targeting it supplies the same literal — directly, or through one
+  caller-side hop of the intra tier. `prov: ["dataflow"]`.
 
-Both tiers ship in this change. Monotonicity holds by construction — the dataflow tier only adds
-edges, never removes or re-targets a literal-tier edge — so `config_uses(-a 1) ⊆ config_uses(-a 4)`,
-the same additive contract as the DDG's `ssa` → `points-to` widening.
+All three ship in this change. Monotonicity holds by construction: a read closed at a lower tier is
+never recomputed, and a tier only converts an unresolved read into an edge. So
+`config_uses(-a 1) ⊆ config_uses(-a 3) ⊆ config_uses(-a 4)`, the same additive contract as the DDG's
+`ssa` → `points-to` widening.
+
+**Three refusals that make the tiers safe**, each as load-bearing as the closures — a tier that
+closes a read it should not have emits an edge claiming code reads a key it never reads, which is
+strictly worse than the unresolved record it replaced:
+
+1. *Any non-closing reaching def kills the resolution*, rather than being skipped. Two paths
+   assigning different literals means the read is genuinely ambiguous, and picking one would be a
+   confident wrong answer.
+2. *The intra tier consults only `prov` containing `ssa`, and this is what keeps `-a 3 ⊆ -a 4` true.*
+   At `-a 4` the DDG also carries `points-to` edges that may-alias the variable's use to an unrelated
+   write, which is not a `name = "literal"` shape. Because a non-closing def kills resolution,
+   admitting an alias edge would *remove* an edge the ssa-only L3 set resolved cleanly — a widening
+   that breaks the additive contract. codeanalyzer-python documents hitting this first.
+3. *An incomplete call-site set does not close.* A callee whose callers the analyzer could not fully
+   see may be handed a different key elsewhere. Known ceiling, stated rather than papered over: a
+   `public` method can be called from outside the analyzed project, which no in-project call graph
+   rules out — the same whole-application assumption python's tier makes.
+
+The DDG use site is matched by span **containment**, not id equality: the CFG/DDG is statement-level
+while a `call` body node is keyed by its own narrower span, so a def's recorded use site is the
+enclosing statement. Containment covers both the bare-expression-statement case and the common
+`return env.getProperty(key);` nesting without special-casing either.
 
 **Divergence from python, stated:** the same flag yields different availability on the two
 analyzers (`-a 1` answers on Java, returns empty on python). Java has the data a level earlier and
@@ -191,13 +237,59 @@ onto one relationship and keep only the last `SET`.
 | --- | --- |
 | `frameworks_detected` | which of the five finders actually matched something |
 | `rulesets` | the five finder names (Spring, JaxRs, Jakarta, Struts, Camel) — that **is** Java's ruleset vocabulary, hardcoded rather than data-driven |
-| `unresolved` | count, by finder, of near-misses: an annotation the finder recognises on a construct it cannot attribute |
-| `errors` | a finder that threw or bailed, one string each |
+| `unresolved` | count, by finder, of declarations the pass could not decide because that finder threw |
+| `errors` | one deduplicated message per finder that failed |
 
 Projected as python does: `entrypoint_frameworks: string[]` plus
 `entrypoint_report_json: string` (sorted-key JSON) on `:JApplication`. **Always present, even when
 empty** — an absent report and an empty one must not be the same observation, which is the whole
 point of the record.
+
+**Known ceiling on `unresolved`/`errors`, recorded rather than left implicit.** They capture a finder
+that *throws*. The five finders currently swallow their own resolution failures internally
+(`StrutsEntrypointFinder.java:41` logs and returns `false`), so those near-misses are not counted
+today, and both fields will usually be empty. Making them count is a change to finder behaviour, and
+finder accuracy is out of scope for this spec — a separate change, not a silent gap.
+
+### D5a — Attribution lives on the node, not in a run-scoped tally
+
+Settled during implementation, and it is the load-bearing decision behind D5's
+`frameworks_detected`. The finders return booleans and `TypeBuilder`/`CallableBuilder` collapsed them
+with `anyMatch`, so *which* finder matched was discarded. Recovering it needs somewhere to put it.
+
+**Decision.** `entrypoint_frameworks: string[]` on `type` and `callable`, with `frameworks_detected`
+computed as a union over the built tree at assembly time.
+
+**Why not a run-scoped collector threaded through the builders.** `L1Extractor` reuses a cached
+module byte-for-byte and skips the build entirely, so the finders never run for that file. A tally
+kept during the walk would under-report `frameworks_detected` on a warm cache — which is precisely
+the ambiguous empty this whole record exists to prevent. The tree carries the attribution whether the
+module was rebuilt or reused.
+
+**Why not deriving it from the emitted decorators in a later pass.** Cache-immune and schema-free,
+but it reimplements the five finders' matching tables in a second place, which drifts the day either
+side changes.
+
+This adds two node-level fields the triage table above did not name, and it is *more* python parity
+rather than less: `PySymbol` and `PyCallable` already carry `is_entrypoint` alongside
+`entrypoint_frameworks` (`schema.py:110-111,133-134`). `is_entrypoint` is retained and is exactly
+`entrypoint_frameworks` being non-empty.
+
+### D6 — One edge per matching key, not "exactly one match or nothing"
+
+A read that closes on a literal is resolved against the declared `:ConfigKey` set by namespace
+preference order — the first namespace with at least one match wins — and then emits **one
+`J_USES_CONFIG` edge per matching key**. A read becomes an `undefined-key` record only when *zero*
+keys match.
+
+This follows codeanalyzer-python's resolver directly (`config_use.py:304`, `for key in matched`), and
+it is the only rule that survives the real shapes: one key legitimately appears in both
+`application.properties` and `application-dev.properties`, and D1's `@ConfigurationProperties` prefix
+claims every key beneath it by design. A rule demanding a unique match would drop both cases on the
+floor as unresolved, reporting nothing where the honest answer is "several".
+
+Stated because the tracking issue's first draft said "exactly one", which is wrong and would have
+been implemented as written.
 
 ---
 
@@ -206,15 +298,20 @@ point of the record.
 Epic in `codellm-devkit/.github`; children filed on the repo they change, **just-in-time**, as each
 unit is picked up. Each child is one PR.
 
-| # | Repo | Unit |
-| --- | --- | --- |
-| 1 | codeanalyzer-java | literal tier: detectors, resolver, `config_uses` / `config_reads_unresolved` in `analysis.json`, both new relationship types |
-| 2 | codeanalyzer-java | dataflow tier over the L3/L4 DDG, `prov: ["dataflow"]` |
-| 3 | codeanalyzer-java | entrypoint report: model, finder plumbing, both projections |
-| 4 | python-sdk | Java facade accessors — **deferred, not this cycle** |
+| # | Repo | Unit | Tracked |
+| --- | --- | --- | --- |
+| 1 | codeanalyzer-java | literal tier: detectors, resolver, `config_uses` / `config_reads_unresolved` in `analysis.json`, both new relationship types | #232 → PR #233 |
+| 2 | codeanalyzer-java | dataflow tiers over the L3 DDG and L4 call graph, `prov: ["dataflow"]` | #236 → PR #237, stacked on #233 |
+| 3 | codeanalyzer-java | entrypoint report: model, finder plumbing, node attribution, both projections | #234 → PR #235 |
+| 4 | python-sdk | Java facade accessors — **deferred, not this cycle** | not filed |
 
-Only child 1 is filed now. The rest are recorded here and filed when picked up; a plan mirrored into
-the backlog ahead of the work is inventory.
+Children are filed just-in-time as each unit is picked up; a plan mirrored into the backlog ahead of
+the work is inventory. Child 4 stays unfiled by the release-plan decision below.
+
+**Ordering note.** Child 2 is stacked on child 1's branch rather than `main`: the tiers extend the
+same resolver. Child 3 is independent and branches from `main`. Each branch regenerates
+`schema.neo4j.json` against itself, so one regeneration is owed once children 1 and 3 have both
+landed — the checked-in artifact is a whole-catalog snapshot, not a per-change diff.
 
 ## 6. Release plan
 
@@ -241,3 +338,12 @@ that child is new SDK surface, not a read-the-new-field change.
   returns `TRUE`.
 - No dangling endpoints: every `src` resolves to a projected `:JBodyNode` / `:JCallable` /
   `:JField` / `:JType`, every unresolved-read `dst` to a `:JExternal`.
+- Cache: a warm `-c <dir>` run produces a report byte-identical to the cold one (the D5a invariant).
+
+**What the corpus can and cannot prove, recorded so a reviewer does not over-read the runs.**
+daytrader8's config reads are all either literals or undeclared keys — it contains no non-literal
+read for a dataflow tier to close — and the other checked-in fixtures have no config reads or no
+checked-out sources. So corpus runs demonstrate *monotonicity and the absence of false positives*;
+the tier closures themselves are demonstrated by fixtures only. Separately, `--l3-engine wala` needs
+a built project, so the configuration where D3's `ssa` filter actually earns its keep is worth one
+run against a real build before the train ships.
