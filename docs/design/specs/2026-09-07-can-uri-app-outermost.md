@@ -217,7 +217,31 @@ mechanism; a hard cut with a detectable version is cheaper than a shim nobody re
 
 ## 6. Decomposition and release plan
 
-**Proposed, pending sign-off** (§ decomposition is the user's call, not the author's):
+### Decided: codeanalyzer-java first, in 3.1.1
+
+The maintainer's call, made with the costs below on the table, and recorded here rather than
+argued again. **Rationale: they are currently the only consumer** — they own `python-sdk`, and no
+external party pins a `can://` id shape.
+
+**Accepted costs, stated so they are not rediscovered as surprises:**
+
+- **The grammar fragments until the siblings follow.** Java emits `can://<app>/java/…` while
+  codeanalyzer-python emits `can://python/<app>/…` and codeanalyzer-typescript
+  `can://typescript/<app>/…`. Any graph sharing a database across languages has two id shapes in it
+  and the cross-language delete scope D2 promises does **not** yet work. This is the parity-clause
+  cost; it is temporary only if the siblings actually follow.
+- **A breaking id change ships under a PATCH version.** `3.1.1` was cut for an opt-in CLI flag.
+  Anything pinning `codeanalyzer-java==3.1.0` and relaxing to `~3.1` receives a different id
+  grammar without a version signal saying so. `python-sdk release/2.0` pins `==3.1.0` exactly, so
+  it is insulated until deliberately bumped — which is what makes this survivable.
+- **`python-sdk` breaks on the bump.** `release/2.0` carries 372 `can://` references, including
+  expected-JSON fixtures for Java. Bumping its pin to `3.1.1` is therefore not a version edit; it
+  is a fixture migration.
+
+The sibling analyzers, the SDK and the docs stay in this spec's §6 table as the remaining work,
+unfiled until picked up.
+
+### The rest — proposed, pending sign-off
 
 Epic in `codellm-devkit/.github`, children filed just-in-time, one PR each:
 
@@ -234,9 +258,9 @@ Epic in `codellm-devkit/.github`, children filed just-in-time, one PR each:
 is the fragmentation the parity clause forbids, so no analyzer releases until every analyzer's
 child is merged. `python-sdk` follows, pinning the three released analyzer versions together.
 
-**This does not ride codeanalyzer-java 3.1.1.** That is a patch release carrying an opt-in CLI
-flag; this is a breaking cross-repo change to the identity grammar. Conflating them would ship a
-MAJOR contract break under a PATCH version number.
+**Revised: it does ride 3.1.1**, per the decision above. The paragraph this replaces argued the
+opposite — that a MAJOR contract break should not ship under a PATCH number — and that objection
+stands on its merits; it is overridden deliberately, not resolved.
 
 ---
 
