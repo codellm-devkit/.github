@@ -1,7 +1,14 @@
 # Spec: a `<service>` segment for the canonical `can://` identity grammar
 
-Status: draft for review
+Status: **superseded** by `2026-09-07-can-uri-app-outermost.md`
 Date: 2026-08-07
+
+> **Superseded, and why.** The positional argument here is correct and survives. Two things
+> did not: §2's cost table recorded `codeanalyzer-java` and `python-sdk` as "nothing" — both
+> now hold hundreds of `can://` references — and D3 shipped a breaking id change as MINOR
+> `2.1.0` on the grounds that no consumer held an id, which is no longer true. The successor
+> also renames the segment from `<service>` to `<app>`: a monolith has no service, and `app`
+> is the word CLDK already uses for a deployment unit.
 Scope: canonical schema v2 identity grammar, cross-repo
 
 ---
