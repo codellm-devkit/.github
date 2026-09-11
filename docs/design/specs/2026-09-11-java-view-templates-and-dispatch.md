@@ -127,7 +127,7 @@ lists equal), so this coins nothing that needs a sibling to agree.
 - **`via`** ∈ `forward | include | redirect | view-name | navigation`. One edge with a discriminant
   rather than `J_RENDERS` + `J_REDIRECTS_TO`: the consumer question is "what pages can this
   code reach", and the mechanism is an attribute of the answer, not a different answer.
-- **`prov`** ∈ `literal | dataflow`, the tier that resolved it, monotone with the analysis level
+- **`prov`** ∈ `literal | table | dataflow`, the tier that resolved it (§ 4.5 for `table`), monotone with the analysis level
   exactly as on `J_USES_CONFIG`: `["literal"]` at L1, `"dataflow"` when the target reached the
   site over the L3 DDG (17 of DayTrader's 22 dispatches need it).
 - **MERGE on the endpoint pair.** A body node dispatches to one target; a `return` on two paths of
@@ -187,6 +187,28 @@ in `entrypoint_frameworks` and whose return type is `String` or `ModelAndView`, 
 `from-outcome → to-view-id`, then implicit `<outcome>.xhtml`, gated to callables in a JSF managed
 bean — which needs the finder that roadmap candidate 22 adds. Until then nothing is emitted with
 this `via`, and the rule is here so it is coined once.
+
+### 4.5. May-dispatch over a static string table — `prov: ["table"]` (added 2026-09-11, codeanalyzer-java#261)
+
+Running 3.3.0 on DayTrader resolved 3 of 23 dispatches; the rest go through
+`TradeConfig.getPage(N)` = `return webUI[webInterface][pageNumber]`, a static `String[][]` of page
+paths indexed by a runtime-selected interface. No single target exists on any path, so the tiers
+above refuse correctly — and the 20 remaining JSPs stay unreachable although the set of pages the
+code can reach is fully static. The **table tier** closes that shape deliberately as a
+may-dispatch: a target expression that is a call `T.m(…)` whose every `return` is an array access
+rooted at a static `String[]` / `String[][]` field of `T` with an array-initializer of string
+literals resolves to **every literal in that initializer**, one `J_DISPATCHES_TO` per matching
+artifact, `prov: ["table"]`. The same closure applies to a caller's argument when the
+interprocedural tier binds a parameter; the union of all callers is the candidate set and `prov`
+is `["table"]` when any table contributed.
+
+This is the first over-approximation in the pass, and `prov` is what keeps it honest: `literal` and
+`dataflow` edges still mean exactly one target; a `table` edge means "one of these". Table entries
+naming no artifact (a servlet URL) contribute nothing; a table matching none is
+`no-such-artifact`. Scope is the table shape only — not constant propagation, maps, enums, or
+`switch`-returned literals. The callee is found by declaring-type simple name plus method name
+within the tree, so the tier runs at `-a 1`; two same-named types both declaring the method make
+it give up rather than pick one.
 
 **Unresolved reasons**, mirroring `config_reads_unresolved`:
 
