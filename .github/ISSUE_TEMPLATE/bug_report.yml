@@ -1,0 +1,79 @@
+name: Bug report
+description: Something in a codellm-devkit repo behaves differently from what it documents.
+title: ""
+labels: ["bug"]
+projects: ["codellm-devkit/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Show, don't describe.** A pasted command and its output is worth a paragraph of
+        prose and is checkable. Every claim here is one of three things: a fact with a
+        citation (`file:line`, or a number with the command that produced it), a consequence
+        that follows from one, or a guess you mark as a guess.
+
+        **Search open issues first** and comment on the duplicate instead of filing. Say
+        what is new.
+
+        Keep it short. A bug report over 400 words outside its code blocks is usually two
+        bug reports.
+
+  - type: input
+    id: repo
+    attributes:
+      label: Repo and version
+      description: Which repo, and the exact version or commit. `codeanalyzer --version`, the installed package version, or a SHA.
+      placeholder: codeanalyzer-python 2.1.3 (or commit a1b2c3d)
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The smallest input that shows it, and the exact command. Paste them; do not describe them. If you cannot reduce it, say what you tried.
+      placeholder: |
+        ```python
+        # fixture.py
+        @app.route("/x")
+        def handler(): ...
+        ```
+        ```
+        $ codeanalyzer -i fixture.py -a 2
+        ```
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed vs expected
+      description: Paste the real output, then say what it should have been. An abridged paste is fine; a paraphrased one is not.
+      placeholder: |
+        Observed:
+        L2  body{"34:15"}  kind=call  callee=null
+
+        Expected: callee resolved to the @external id, as L2 does for module-level calls.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: unchecked
+    attributes:
+      label: What you have not checked
+      description: The honest part. Sibling analyzers you did not try, versions you did not test, whether it predates a recent change. An unmarked guess sends someone to fix a thing that is not broken.
+      placeholder: |
+        - Not tried on codeanalyzer-typescript; guess, untested: the shared resolver means it is affected too.
+        - Did not bisect. Present in 2.1.3; unknown before that.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, OS, runtime version, anything else. Optional.
+    validations:
+      required: false
