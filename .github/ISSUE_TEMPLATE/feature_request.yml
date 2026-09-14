@@ -1,0 +1,74 @@
+name: Feature request
+description: Propose a capability a codellm-devkit repo does not have yet.
+title: ""
+labels: ["enhancement"]
+projects: ["codellm-devkit/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This is a proposal, not a work item.** It becomes a Work item when a maintainer
+        picks it up, and an Epic only if it spans repos or several pull requests. You do not
+        need to decompose it here.
+
+        **Anything touching the canonical schema or a public SDK API gets designed before it
+        gets built** — a committed spec, decided with a maintainer. Propose the capability
+        and the constraint; leave the schema shape to that conversation.
+
+        **Search open issues first.** Keep it under 400 words outside code blocks.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you cannot do today, and what you do instead. One or two paragraphs. Cite `file:line` or paste the workaround — a concrete blocked task beats a described one.
+      placeholder: |
+        Resolving a call to a third-party callable returns null at L2, so downstream
+        reachability stops at the project boundary (codeanalyzer-python, resolver.py:214).
+        We currently re-resolve against a hand-kept map of ~40 framework entrypoints.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope boundary
+      description: What this should NOT do. The most useful field in the form — it is what stops the eventual PR sprawling.
+      placeholder: |
+        Identity and provenance for out-of-project targets only. Not signature
+        reconstruction, not stub generation, and not a bundled type-stub corpus.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else would solve it, and why you are not proposing that. "None" is a valid answer if you say so explicitly.
+      placeholder: |
+        - Resolve in each SDK instead — rejected, four SDKs would diverge on the id format.
+        - Ship stubs with the analyzer — rejected, licensing and size.
+    validations:
+      required: true
+
+  - type: textarea
+    id: caveats
+    attributes:
+      label: Caveats and known risks
+      description: Substrate limits, inherited unsoundness, cost, anything that makes this harder than it looks. If you genuinely know of none, write that.
+      placeholder: |
+        - Python has no import-time guarantee that a name resolves to one target; the id is a best effort.
+        - Guess, untested: which SDKs already read this field.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: What "done" would look like
+      description: An observable condition, not "works correctly". Prefer an exact expected set over "non-empty", and a demonstrated behaviour over an asserted one.
+      placeholder: |
+        - Calls to a third-party callable carry a stable id at L2 on the fixture corpus.
+        - The id is identical across two runs and across two machines.
+    validations:
+      required: true

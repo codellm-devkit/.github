@@ -81,11 +81,24 @@ Each issue gets a branch `<type>/issue-NNN-<short-title>` and one PR that closes
 
 ## Writing a good issue
 
-Two sections carry most of the weight, and both templates require them:
+**Use a form.** Every issue and every pull request in this org is filed on one of the templates —
+`epic.yml`, `work_item.yml`, `bug_report.yml`, `feature_request.yml`, or
+`pull_request_template.md`. Not an approximation of one, and not your own headings covering the
+same ground. `gh issue create --body` and `gh pr create --body` bypass the form silently: pass
+`--template`, or reproduce the sections exactly — same names, same order, none added, none
+dropped. A section that does not apply is filled with the reason it does not apply, never deleted.
+
+Two fields carry most of the weight, and every form requires them or their analogue:
 
 - **Scope boundary** — what this issue does *not* do. Usually the most useful sentence in the
-  issue; it is what stops a PR sprawling.
+  issue; it is what stops a PR sprawling. On a bug report it is *What you have not checked*.
 - **Definition of done** — exact conditions. Prefer an exact expected set over "non-empty", and a
   demonstrated behaviour over an asserted one. "Works correctly" is not a definition of done.
 
-Cite `file:line` wherever you can. An issue that names the line is one someone can pick up cold.
+**Show, don't describe.** Cite `file:line` wherever you can, and paste the command and its output
+rather than summarising it. An issue that names the line is one someone can pick up cold. Every
+sentence is a fact with a citation, a consequence that follows from one, or a guess marked as a
+guess — an unmarked guess sends the next person to fix something that is not broken.
+
+**Keep it short.** Under 400 words outside code blocks. Code blocks do not count; they are the
+evidence the words exist to avoid restating. An issue that needs more is usually two issues.
