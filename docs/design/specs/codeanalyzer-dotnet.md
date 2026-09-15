@@ -76,7 +76,7 @@ Decided with the maintainer during the design loop. These are transcribed to
 | # | Concept | Java | Python / TS | **C# decision** | Rationale |
 | --- | --- | --- | --- | --- | --- |
 | D6 | **Partial types** | no precedent | TS declaration merging (nearest cousin) | **Merge into one `type` node homed at the primary declaring file.** `parts: [{file, span}]` lists every declaration site; members declared elsewhere carry `declared_in: "<file key>"` so `span.bytes` slices the right `module.source`. | Roslyn already merges partials for us — one `INamedTypeSymbol` with several `DeclaringSyntaxReferences` — so the merged view is the *natural* output, not extra work. Per-file fragments would force every SDK to re-merge, and any consumer that forgets sees half a class. Partials are pervasive in real C# (WinForms, EF, ASP.NET, source generators). |
-| D7 | **Properties / events / indexers** | flat fields | TS `accessor_kind` + `#get`/`#set` keys | **Both views.** `fields{}` gets a node `kind:"property"` (declared type, modifiers, `is_auto`); non-auto accessors *also* appear in `callables{}` keyed `Bar#get` / `Bar#set`. Events mirror it (`kind:"event"` + `#add`/`#remove`). Indexers are callables keyed `this[]`. | Idiomatic C# exposes state as properties, so a callables-only model empties `get_fields()`. But accessors hold real logic and need CFG/DDG at L3, so a fields-only model is a dataflow blind spot. Follows TS-v2 decision V7. |
+| D7 | **Properties / events / indexers** | flat fields | TS accessors are first-class *kinds*: `"getter" \| "setter"` (`src/schema/v2/model.ts`) | **Both views.** `fields{}` gets a node `kind:"property"` (declared type, modifiers, `is_auto`); non-auto accessors *also* appear in `callables{}` keyed `Bar#get` / `Bar#set`, with `kind:"method"`. Events mirror it (`kind:"event"` + `#add`/`#remove`). Indexers are callables keyed `this[]`. | Idiomatic C# exposes state as properties, so a callables-only model empties `get_fields()`. But accessors hold real logic and need CFG/DDG at L3, so a fields-only model is a dataflow blind spot. The dual view is **not** inherited from TypeScript — TS distinguishes accessors by `kind`, and matching it would add two kinds to the shared callable vocabulary. Keying instead keeps that vocabulary to the four the keystone lists; the divergence is deliberate and recorded in § 8. |
 | D8 | **Type kinds** | `is_interface`/`is_enum` booleans | TS sibling collections | **First-class `kind` values: `record`, `record_struct`, `delegate`** alongside `class`/`struct`/`interface`/`enum`. Records carry `positional_parameters[]` (primary constructor); delegates carry `invoke_signature`. | Additive per the expansion rubric. "Find all records" becomes a `kind` filter, consistent with how every other type distinction is expressed. A delegate modelled as a bodyless `callable` would break the L3 assumption that every callable is a CFG root. |
 | D9 | **`ref` / `out` / `in` parameters** | no precedent | no precedent | **`param.ref_kind: ref\|out\|in\|ref_readonly`** (absent = by value) at L1. At L4, each `ref`/`out` param gets an `@formal_out:<name>` vertex alongside `@formal_out` for `$ret`, with a matching `actual_out` per call site. | Canonical already sanctions `formal_out` `of` being "`$ret` or a by-ref param" — C# is the first language to exercise it. Without this, every `TryParse`/`TryGetValue` result is a dataflow dead end, and those are everywhere in C#. |
 | D10 | **Namespaces** | packages | TS nested `namespace` container node (V1) | **A `namespace` string field on the `module` node.** Multi-namespace files key their types `A.F` / `B.F` and each type node carries its own `namespace`. | The canonical `module` field exists for exactly this. A C# namespace is a pure naming scope spanning the whole solution, so a per-file container node would imply a containment that is not real — unlike a TS namespace, which is a value-producing per-file scope. |
@@ -91,6 +91,19 @@ Decided with the maintainer during the design loop. These are transcribed to
 | D14 | **DDG provenance token** | Reuse the sanctioned additive token **`reaching-defs`**. | Roslyn's CFG is not SSA (flow captures cover temporaries, not locals) and there is no points-to oracle, so `["ssa"]` and `["points-to"]` would both overclaim. `reaching-defs` was already sanctioned as an additive token for codeanalyzer-typescript (its issue #32); reusing it beats coining a third. |
 | D15 | **Span offset units: UTF-8 byte offsets**, matching codeanalyzer-python. An offset table is computed once per file alongside the `source` blob, converting Roslyn's UTF-16 `TextSpan` positions. | The canonical field is named `bytes`, and Python is the reference analyzer the schema was written against. codeanalyzer-typescript emits UTF-16 char offsets (its V5) and is the outlier to be fixed separately — with a non-ASCII identifier or string literal, char and byte offsets disagree on the same logical position. |
 | D16 | **Neo4j labels are per-language prefixed**: nodes merge on `:CsNode` plus a kind-specific label; relationships are `CS_HAS_MODULE`, `CS_DECLARES`, `CS_CALLS`, `CS_CFG_NEXT`, `CS_DDG`, and so on. | Follows the maintainer's 2026-07-02 decision on codeanalyzer-python (`PyCFGNode`, `PY_CFG_NEXT`). The CPG vocabulary stays cross-language in *shape* — same suffixes, same properties, same semantics — while each language's subgraph stays separable. codeanalyzer-typescript v2 emits unprefixed labels and is the outlier here. |
+
+### Decided in the datamodel walk
+
+D1–D16 were confirmed node by node with the maintainer before implementation began. That walk
+also settled four points the sections above left unstated. Each is additive; none renames a
+shared field or repurposes a shared `kind`.
+
+| # | Concept | Java | Python / TS | **C# decision** | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| D17 | **Base class and interfaces** | `superclass` + `interfaces`, names | Python `base_classes` (display strings); TS `extends_ids` / `implements_ids` | **The keystone's names, `base_types[]` + `interfaces[]`, holding `can://` ids.** A supertype resolving to metadata rather than to a node — `System.Object`, a package interface — is **dropped**, not named and not homed. | The two mature v2 analyzers disagree here and neither follows the keystone, so there is no precedent to inherit — only a fork to pick. Ids are what let the Neo4j `CS_EXTENDS` / `CS_IMPLEMENTS` overlay resolve endpoints directly instead of re-matching names at projection time, which is the fuzzy lookup the one-`SignatureOf` rule exists to prevent. Homing external supertypes the way D-call-targets homes external *call* targets was declined: it would put nearly every class's `System.Object` into `external_symbols` at L1, where that map otherwise does not exist until L2. **Known loss:** `class UserService : IUserService` shows an empty `interfaces[]` when the interface comes from a package. |
+| D18 | **Top-level statements** | no precedent (no such form) | Python module-level code lands in `functions{}` | **Report Roslyn's synthesized type**: `types{ "Program": { callables{ "<Main>$…" } } }`. `module.functions{}` is empty for C# without exception. | The callable's id must carry the `Program` segment to match the symbol the call graph resolves against. Hoisting `<Main>$` into `functions{}` reads closer to the source — the author wrote no class — but then the id and the tree position disagree about where the method lives, and every consumer has to know which one to trust. One rule with no exception beats a shape that flatters the source. |
+| D19 | **Attributes** | annotations, flat | Python `decorators: List[str]` (flat); keystone demands structured | **Structured `decorators: [{ name, args[], span }]`** on types, callables, fields and parameters; argument values as source-text strings. | C# attributes are where routing, ORM and DI facts live, so a later entrypoint pass reads `args[0]` rather than regex-ing C# syntax out of a string. The keystone names flat strings as the shape not to use, and Python is the outlier, not the precedent. **Known loss:** C# attributes take positional *and* named arguments (`[Route("x", Name = "y")]`). A `named_args` map was declined to avoid a field no sibling has, so named arguments are flattened into `args` as source text and a consumer needing the distinction parses it back out. |
+| D20 | **Call-site keys** | n/a (v1 rich call sites) | TS `line:col` with a `/k` tiebreak (V8) | **`line:col`, disambiguated `line:col/k` on collision.** | The keystone's ordinal-id grammar, and what keeps positional ids addressable so the SDK can offer `flows_to_statement("Svc.cs:42")`. Chained calls — `x.Trim().ToLower().Split(',')`, pervasive in C# — differ by column, so collisions are rare. Keying on the invocation's opening parenthesis would make collisions structurally impossible but would point the key at `(` while `span` covers the whole expression. A per-callable sequential ordinal never collides and gives up line-level addressability entirely. |
 
 ---
 
@@ -180,13 +193,24 @@ The analyzer never invokes MSBuild. For each discovered `.csproj`:
 1. Parse the `.csproj` XML for `<Compile>` items, the default glob (`**/*.cs` minus
    `bin`/`obj`), `<ProjectReference>`, `<TargetFramework(s)>`, `<Nullable>`, `<LangVersion>`,
    and `<DefineConstants>`.
-2. Read `obj/project.assets.json`, which `dotnet restore` writes. Its `targets` section maps
-   every resolved package to the relative `lib/<tfm>/*.dll` paths inside the package, and
-   `packageFolders` gives the NuGet root — together these produce the absolute path of every
-   metadata reference, including the framework reference pack.
-3. Build a `CSharpCompilation` with those `MetadataReference`s and a `CSharpParseOptions`
+2. Read `obj/project.assets.json`, which `dotnet restore` writes, for the **package**
+   references. Its `targets.<tfm>` section lists each resolved library with the relative
+   `lib/<tfm>/*.dll` paths under its `compile` key; `libraries.<name/version>.path` gives the
+   package's folder and `packageFolders` gives the NuGet roots. Together these produce the
+   absolute path of every package metadata reference. Entries whose only compile item is the
+   `_._` placeholder contribute nothing and are skipped.
+3. Locate the **framework** references separately. `project.assets.json` does *not* carry
+   them: the framework appears only as a name, under
+   `project.frameworks.<tfm>.frameworkReferences` (`Microsoft.NETCore.App`, and
+   `Microsoft.AspNetCore.App` for web projects). Their assemblies live in the SDK's targeting
+   pack at `<dotnet-root>/packs/<name>.Ref/<version>/ref/<tfm>/*.dll`. The dotnet root is
+   discovered from `project.frameworks.<tfm>.runtimeIdentifierGraphPath` — the assets file
+   records it as `<dotnet-root>/sdk/<sdk-version>/PortableRuntimeIdentifierGraph.json` — and
+   falls back to `DOTNET_ROOT`, then to resolving `dotnet` on `PATH`. Where several pack
+   versions are installed, the highest version not exceeding the target framework wins.
+4. Build a `CSharpCompilation` with those `MetadataReference`s and a `CSharpParseOptions`
    carrying the language version and preprocessor symbols.
-4. `<ProjectReference>`s become `CompilationReference`s, wired in topological order so a
+5. `<ProjectReference>`s become `CompilationReference`s, wired in topological order so a
    downstream project sees upstream symbols. Cycles are reported and broken by falling back
    to the upstream project's built output dll if one exists.
 
@@ -195,9 +219,22 @@ analyzed once, against the first target framework, and the chosen TFM is recorde
 module's `project` metadata. Analyzing every TFM would duplicate the entire symbol table
 under identical ids.
 
-**Failure mode.** If `project.assets.json` is missing, the analyzer reports
+**Failure mode — no restore.** If `project.assets.json` is missing, the analyzer reports
 `run 'dotnet restore' first` and — unless `--strict` — degrades to a syntax-only L1 pass
 (no types, no callee resolution, `max_level: 1`).
+
+**Failure mode — no targeting pack.** If step 3 cannot locate a pack, every framework type
+resolves to an error type and the semantic model is worthless while still appearing to work:
+callables get no return types and L2 resolves almost nothing. This is reported as a hard
+error naming the roots that were searched, never degraded to silently, because a symbol table
+built without `System.Object` looks superficially valid.
+
+**Layout risk.** The `packs/` directory layout is an implementation detail of the SDK
+install, not a documented contract, and step 3 depends on it. A layout change breaks reference
+resolution for every analyzed project at once. Bundling reference assemblies with the analyzer
+(the `Basic.Reference.Assemblies` approach) removes that coupling at the cost of one pinned
+copy per supported TFM inside the binary, and is the fallback if the discovery path proves
+fragile in the field.
 
 **Known gap.** Source generators do not run, so generated partials (`[GeneratedCode]`,
 records' generated members, ASP.NET minimal-API glue) are absent unless the project has
@@ -442,16 +479,34 @@ Documented rather than silently absorbed:
 
 ## 8. Sibling divergences this spec records
 
-Two points where the mature reference analyzers already disagree with each other. Both were
-decided here in favour of `codeanalyzer-python` (D15, D16), which makes
-`codeanalyzer-typescript` the outlier in each case. Neither is a C#-specific question, and
-neither is fixed by this work — they are recorded so a later cross-analyzer reconciliation has
-a written starting point rather than three analyzers each having quietly picked a side.
+Points where the mature reference analyzers already disagree — with each other, with the
+keystone, or both. None is a C#-specific question and none is fixed by this work; they are
+recorded so a later cross-analyzer reconciliation has a written starting point rather than
+three analyzers each having quietly picked a side.
+
+The first two were decided in favour of `codeanalyzer-python` (D15, D16), which makes
+`codeanalyzer-typescript` the outlier in each case. The last three are places where **neither**
+sibling follows the keystone, so C# is the first analyzer to implement what the keystone
+actually says.
 
 1. **Span offset units** — Python documents UTF-8 bytes, TypeScript (its V5) emits UTF-16
    chars, the canonical field is named `bytes`. C# follows Python (D15).
 2. **Neo4j label prefixing** — Python prefixes per language, TypeScript v2 emits unprefixed
    under a shared `:CanNode` label. C# follows Python (D16).
+3. **Heritage field shape** — the keystone specifies `base_types[]` + `interfaces[]` holding
+   durable ids. Python emits a single `base_classes` list of display strings; TypeScript emits
+   `extends_ids` / `implements_ids`. Three names for one concept, and neither sibling uses the
+   keystone's. C# implements the keystone (D17).
+4. **Decorator structure** — the keystone specifies structured `{ name, args[], span }` and
+   explicitly names flat strings as the shape not to use. Python emits
+   `decorators: List[str]`. C# implements the keystone (D19).
+5. **Accessor modelling** — TypeScript makes accessors first-class callable kinds
+   (`"getter"` / `"setter"`); C# keys them `#get` / `#set` with `kind:"method"`, keeping the
+   shared callable vocabulary to the four kinds the keystone lists (D7). Both are defensible;
+   they are not compatible, and an SDK filter for "all accessors" cannot be written once
+   across both languages until one moves.
 
-Reconciling TypeScript to either answer is out of scope here and would be its own design
-session under the schema-evolution path.
+Reconciling TypeScript or Python to any of these answers is out of scope here and would be its
+own design session under the schema-evolution path. Items 3–5 are the more urgent of the five:
+a divergence *from the keystone* means the SDK cannot model the field once, which is the
+premise the whole single-model design rests on.
