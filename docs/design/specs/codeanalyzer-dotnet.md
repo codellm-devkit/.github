@@ -3,6 +3,9 @@
 Status: draft for review
 Date: 2026-08-06
 Scope: new language pack (C#), canonical schema v2, greenfield
+Amended by: [`2026-11-08-dotnet-application-identity.md`](2026-11-08-dotnet-application-identity.md)
+  — D1/§4.4 identity grammar (two-segment `can://<namespace>/<application>/csharp/…` +
+  `identity_version: 2`, per python-sdk#440) and §6 release plan (retargeted to the `cldk` 2.x line).
 
 ---
 
