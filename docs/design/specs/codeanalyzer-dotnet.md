@@ -3,6 +3,9 @@
 Status: draft for review
 Date: 2026-08-06
 Scope: new language pack (C#), canonical schema v2, greenfield
+Amended by: [`2026-11-08-dotnet-application-identity.md`](2026-11-08-dotnet-application-identity.md)
+  — D1/§4.4 identity grammar (two-segment `can://<namespace>/<application>/csharp/…` +
+  `identity_version: 2`, per python-sdk#440) and §6 release plan (retargeted to the `cldk` 2.x line).
 
 ---
 
@@ -66,6 +69,7 @@ Decided with the maintainer during the design loop. These are transcribed to
 | # | Decision | Rationale |
 | --- | --- | --- |
 | D1 | **Scope: C# only. Language token `csharp`.** Ids are `can://csharp/<app>/…`; `language: "csharp"`. | VB.NET and F# can be added later as additive tokens in the same repo. A `dotnet` token would lie about scope and force an id migration when VB arrives. |
+| D1a | **Repo/analyzer name: `codeanalyzer-csharp`** (supersedes the original `codeanalyzer-dotnet`). `analyzer.name` in the emitted envelope is `codeanalyzer-csharp`. | **Reverses D1's platform-family naming.** One repo per language is simpler and the name stays honest about scope; the `csharp` language token (D1) is unaffected. The earlier reasoning for a `-dotnet` repo (room for VB.NET/F# as additive tokens) is dropped — those, if ever built, get their own `codeanalyzer-*` repos. The spec file itself keeps its filed name (`codeanalyzer-dotnet.md`) to preserve provenance; only the analyzer/repo identity changes. |
 | D2 | **Compilation front end: read `obj/project.assets.json` + `.csproj` directly. No MSBuild.** | `dotnet restore` already writes every resolved package dll path to `project.assets.json`. Reading it and calling `CSharpCompilation.Create` gives a full `SemanticModel` with no `MSBuildLocator`, no SDK-version coupling, and a genuinely self-contained binary. MSBuildLocator version mismatch is the most common failure mode for Roslyn-based tools. Prereq: the target repo has been restored — true of any repo that has been built. |
 | D3 | **Distribution: self-contained single-file ReadyToRun binary, per-platform wheels on PyPI as `cansharp`.** | Roslyn leans on reflection, which NativeAOT trimming breaks in ways that surface at runtime on user code rather than in our tests. R2R keeps startup acceptable without that risk. Per-platform wheels mean pip downloads exactly one binary, offline-installable, no install-time network. |
 | D4 | **Project identity: a `project` typed field on the `module` node.** | `symbol_table` stays a flat `{relative-path → module}` map, as every SDK model assumes. A container node between `application` and `symbol_table` would be a spine change, not a leaf addition. One analysis.json per solution keeps cross-project call edges resolvable. |
