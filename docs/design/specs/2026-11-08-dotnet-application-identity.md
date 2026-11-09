@@ -1,7 +1,5 @@
 # Spec: codeanalyzer-dotnet adopts application-scoped identity
 
-Status: draft for review
-Date: 2026-11-08
 Scope: amends [`codeanalyzer-dotnet.md`](codeanalyzer-dotnet.md) — D1 and §4.4 (identity),
        §6 (release plan); canonical schema v2 spine already shipped this change for the
        other analyzers
